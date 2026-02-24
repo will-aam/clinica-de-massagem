@@ -1,0 +1,56 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id       String @id @default(cuid())
+  email    String @unique
+  password String
+
+  @@map("admins")
+}
+
+model Client {
+  id              String    @id @default(cuid())
+  name            String
+  cpf             String    @unique
+  phone_whatsapp  String
+  created_at      DateTime  @default(now())
+
+  packages Package[]
+
+  @@map("clients")
+}
+
+model Package {
+  id             String    @id @default(cuid())
+  client_id      String
+  total_sessions Int
+  used_sessions  Int       @default(0)
+  active         Boolean   @default(true)
+  created_at     DateTime  @default(now())
+
+  client   Client    @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  checkIns CheckIn[]
+
+  @@map("packages")
+}
+
+model CheckIn {
+  id         String   @id @default(cuid())
+  client_id  String
+  package_id String
+  date_time  DateTime @default(now())
+
+  package Package @relation(fields: [package_id], references: [id], onDelete: Cascade)
+
+  @@map("check_ins")
+}
