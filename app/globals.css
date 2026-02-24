@@ -1,49 +1,49 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
+@import "tailwindcss";
+@import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 /* Clinic Palette: #F2E7DC (cream), #BFA095 (warm taupe), #D9C6BF (blush), #BF9793 (rose), #F2F2F2 (light gray) */
 :root {
-  --background: #F2E7DC;
-  --foreground: #3D2C24;
-  --card: #FFFFFF;
-  --card-foreground: #3D2C24;
-  --popover: #FFFFFF;
-  --popover-foreground: #3D2C24;
-  --primary: #BF9793;
-  --primary-foreground: #FFFFFF;
-  --secondary: #D9C6BF;
-  --secondary-foreground: #3D2C24;
-  --muted: #F2F2F2;
-  --muted-foreground: #7A6860;
-  --accent: #BFA095;
-  --accent-foreground: #FFFFFF;
-  --destructive: #D94F4F;
-  --destructive-foreground: #D94F4F;
-  --border: #D9C6BF;
-  --input: #D9C6BF;
-  --ring: #BF9793;
-  --chart-1: #BF9793;
-  --chart-2: #BFA095;
-  --chart-3: #D9C6BF;
-  --chart-4: #8B6F66;
-  --chart-5: #F2E7DC;
+  --background: #f2e7dc;
+  --foreground: #3d2c24;
+  --card: #ffffff;
+  --card-foreground: #3d2c24;
+  --popover: #ffffff;
+  --popover-foreground: #3d2c24;
+  --primary: #bf9793;
+  --primary-foreground: #ffffff;
+  --secondary: #d9c6bf;
+  --secondary-foreground: #3d2c24;
+  --muted: #f2f2f2;
+  --muted-foreground: #7a6860;
+  --accent: #bfa095;
+  --accent-foreground: #ffffff;
+  --destructive: #d94f4f;
+  --destructive-foreground: #d94f4f;
+  --border: #d9c6bf;
+  --input: #d9c6bf;
+  --ring: #bf9793;
+  --chart-1: #bf9793;
+  --chart-2: #bfa095;
+  --chart-3: #d9c6bf;
+  --chart-4: #8b6f66;
+  --chart-5: #f2e7dc;
   --radius: 0.75rem;
-  --sidebar: #3D2C24;
-  --sidebar-foreground: #F2E7DC;
-  --sidebar-primary: #BF9793;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #5A4038;
-  --sidebar-accent-foreground: #F2E7DC;
-  --sidebar-border: #5A4038;
-  --sidebar-ring: #BF9793;
+  --sidebar: #3d2c24;
+  --sidebar-foreground: #f2e7dc;
+  --sidebar-primary: #bf9793;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #5a4038;
+  --sidebar-accent-foreground: #f2e7dc;
+  --sidebar-border: #5a4038;
+  --sidebar-ring: #bf9793;
 }
 
 @theme inline {
-  --font-sans: var(--font-inter), 'Inter', sans-serif;
-  --font-serif: var(--font-playfair), 'Playfair Display', serif;
-  --font-mono: 'Geist Mono', 'Geist Mono Fallback';
+  --font-sans: var(--font-inter), "Inter", sans-serif;
+  --font-serif: var(--font-playfair), "Playfair Display", serif;
+  --font-mono: "Geist Mono", "Geist Mono Fallback";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -89,4 +89,60 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+/* =========================================
+   SCROLLBAR PERSONALIZADA (CLÍNICA)
+   Aplicada na classe .custom-scrollbar e globalmente
+   ========================================= */
+
+/* Para Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #bfa095 transparent;
+}
+
+/* Para navegadores baseados em WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 10px;
+}
+
+/* Fundo sutil apenas quando passar o mouse perto da barra */
+*:hover::-webkit-scrollbar-track {
+  background: #f2f2f2; /* Tom de cinza clarinho da paleta */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d9c6bf; /* Tom blush suave da paleta */
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #bf9793; /* Tom rose mais escuro ao passar o mouse */
+  border: 1px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Para a classe custom-scrollbar (caso precise forçar o estilo apenas nela) */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f2f2f2;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #bfa095;
+  border-radius: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #bf9793;
 }
