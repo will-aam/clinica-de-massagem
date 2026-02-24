@@ -1,17 +1,30 @@
-"use client"
+"use client";
 
-import { use, useState } from "react"
-import useSWR, { mutate } from "swr"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { AdminHeader } from "@/components/admin-header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Progress } from "@/components/ui/progress"
-import { Skeleton } from "@/components/ui/skeleton"
+import { use, useState } from "react";
+import useSWR, { mutate } from "swr";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { AdminHeader } from "@/components/admin-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +35,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +44,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   ArrowLeft,
   User,
@@ -42,43 +55,55 @@ import {
   Trash2,
   CalendarCheck,
   Package,
-} from "lucide-react"
-import { toast } from "sonner"
-import type { Client as ClientType, Package as PackageType, CheckIn } from "@/lib/data"
+  Mail, // Importamos o ícone de e-mail
+} from "lucide-react";
+import { toast } from "sonner";
+import type {
+  Client as ClientType,
+  Package as PackageType,
+  CheckIn,
+} from "@/lib/data";
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface ClientDetailData {
-  client: ClientType
-  packages: PackageType[]
-  checkIns: CheckIn[]
-  activePackage: PackageType | null
+  client: ClientType;
+  packages: PackageType[];
+  checkIns: CheckIn[];
+  activePackage: PackageType | null;
 }
 
-export default function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const router = useRouter()
-  const { data, isLoading } = useSWR<ClientDetailData>(`/api/clients/${id}`, fetcher)
-  const [newSessions, setNewSessions] = useState("10")
-  const [addPkgOpen, setAddPkgOpen] = useState(false)
-  const [deleting, setDeleting] = useState(false)
+export default function ClientDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  const router = useRouter();
+  const { data, isLoading } = useSWR<ClientDetailData>(
+    `/api/clients/${id}`,
+    fetcher,
+  );
+  const [newSessions, setNewSessions] = useState("10");
+  const [addPkgOpen, setAddPkgOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleDelete = async () => {
-    setDeleting(true)
+    setDeleting(true);
     try {
-      const res = await fetch(`/api/clients/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/clients/${id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Cliente excluído com sucesso!")
-        router.push("/admin/clients")
+        toast.success("Cliente excluído com sucesso!");
+        router.push("/admin/clients");
       } else {
-        toast.error("Erro ao excluir cliente")
+        toast.error("Erro ao excluir cliente");
       }
     } catch {
-      toast.error("Erro de conexão")
+      toast.error("Erro de conexão");
     } finally {
-      setDeleting(false)
+      setDeleting(false);
     }
-  }
+  };
 
   const handleAddPackage = async () => {
     try {
@@ -86,29 +111,65 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ total_sessions: Number(newSessions) }),
-      })
+      });
       if (res.ok) {
-        toast.success("Novo pacote adicionado!")
-        setAddPkgOpen(false)
-        mutate(`/api/clients/${id}`)
+        toast.success("Novo pacote adicionado!");
+        setAddPkgOpen(false);
+        mutate(`/api/clients/${id}`);
       } else {
-        toast.error("Erro ao adicionar pacote")
+        toast.error("Erro ao adicionar pacote");
       }
     } catch {
-      toast.error("Erro de conexão")
+      toast.error("Erro de conexão");
     }
-  }
+  };
+
+  // --- FUNÇÕES DE COMUNICAÇÃO ---
 
   const handleWhatsApp = () => {
-    if (data?.client.phone_whatsapp) {
-      const phone = data.client.phone_whatsapp.replace(/\D/g, "")
-      const message = encodeURIComponent(
-        `Olá ${data.client.name}! Lembramos que seu pacote de sessões está ativo na Serenità. Agende sua próxima sessão!`
-      )
-      window.open(`https://wa.me/55${phone}?text=${message}`, "_blank")
-      toast.success("Abrindo WhatsApp...")
+    if (!data?.client) return;
+
+    // Formata o número (remover tudo que não for dígito)
+    const phone = data.client.phone_whatsapp.replace(/\D/g, "");
+    const name = data.client.name.split(" ")[0]; // Pega só o primeiro nome
+
+    // Dados do pacote (se houver)
+    const used = data.activePackage?.used_sessions || 0;
+    const total = data.activePackage?.total_sessions || 0;
+
+    // Monta a mensagem personalizada
+    let message = `Olá, ${name}! Tudo bem? 💆‍♀️✨\n\nPassando para lembrar que seu pacote na Serenità está ativo.`;
+
+    if (activePackage) {
+      message += `\nVocê já realizou ${used} de ${total} sessões.`;
+      if (total - used <= 2 && total - used > 0) {
+        message += `\n⚠️ Faltam apenas ${total - used} sessões para concluir este pacote!`;
+      }
     }
-  }
+
+    const url = `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+    toast.success("Abrindo WhatsApp...");
+  };
+
+  const handleEmail = () => {
+    if (!data?.client) return;
+    const name = data.client.name.split(" ")[0];
+
+    // Assunto e corpo do e-mail
+    const subject = encodeURIComponent("Atualização do seu Pacote - Serenità");
+    const body = encodeURIComponent(
+      `Olá, ${name}!\n\nEste é um aviso sobre o seu pacote de massagens na Serenità.\n\nQualquer dúvida, estamos à disposição.`,
+    );
+
+    // Aqui, idealmente, você teria o campo de e-mail no banco de dados.
+    // Como não criamos ainda no schema, vou usar um "mailto" genérico que a profissional pode preencher na hora,
+    // ou se você quiser, podemos adicionar o campo e-mail ao banco no próximo passo.
+    const email = ""; // Deixe vazio para a pessoa preencher no cliente de e-mail, ou coloque o do cliente se existir.
+
+    window.open(`mailto:${email}?subject=${subject}&body=${body}`, "_self");
+    toast.success("Abrindo seu cliente de e-mail...");
+  };
 
   if (isLoading) {
     return (
@@ -120,7 +181,7 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           <Skeleton className="h-48 w-full" />
         </div>
       </>
-    )
+    );
   }
 
   if (!data?.client) {
@@ -135,19 +196,26 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
           </Button>
         </div>
       </>
-    )
+    );
   }
 
-  const { client, activePackage, checkIns } = data
+  const { client, activePackage, checkIns } = data;
   const progress = activePackage
-    ? Math.round((activePackage.used_sessions / activePackage.total_sessions) * 100)
-    : 0
+    ? Math.round(
+        (activePackage.used_sessions / activePackage.total_sessions) * 100,
+      )
+    : 0;
 
   return (
     <>
       <AdminHeader title="Detalhes do Cliente" />
       <div className="flex flex-col gap-6 p-4 md:p-6">
-        <Button asChild variant="ghost" size="sm" className="w-fit text-muted-foreground">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="w-fit text-muted-foreground"
+        >
           <Link href="/admin/clients">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Voltar para Clientes
@@ -171,29 +239,56 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
             <CardContent className="flex flex-col gap-3">
               <div className="flex items-center gap-3">
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
-                <span className="font-mono text-sm text-foreground">{client.cpf}</span>
+                <span className="font-mono text-sm text-foreground">
+                  {client.cpf}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">{client.phone_whatsapp}</span>
+                <span className="text-sm text-foreground">
+                  {client.phone_whatsapp}
+                </span>
               </div>
 
+              {/* Botoes de Ação Rápida (WhatsApp, Email, Excluir) */}
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button size="sm" variant="outline" onClick={handleWhatsApp} className="text-foreground">
+                {/* Botão WhatsApp */}
+                <Button
+                  size="sm"
+                  onClick={handleWhatsApp}
+                  className="bg-[#25D366] text-white hover:bg-[#128C7E] transition-colors"
+                >
                   <MessageCircle className="mr-2 h-4 w-4" />
-                  Enviar WhatsApp
+                  WhatsApp
                 </Button>
-
+                {/* Botão Email */}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleEmail}
+                  className="text-foreground hover:bg-[#D9C6BF]/20 transition-colors"
+                >
+                  <Mail className="mr-2 h-4 w-4" />
+                  E-mail
+                </Button>
+                <div className="flex-1"></div>{" "}
+                {/* Espaçador para empurrar o excluir para o canto */}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Excluir
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Excluir</span>
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle className="text-foreground">Confirmar exclusão</AlertDialogTitle>
+                      <AlertDialogTitle className="text-foreground">
+                        Confirmar exclusão
+                      </AlertDialogTitle>
                       <AlertDialogDescription>
                         {"Tem certeza que deseja excluir o cliente "}
                         <strong>{client.name}</strong>
@@ -201,7 +296,9 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                      <AlertDialogCancel className="text-foreground">Cancelar</AlertDialogCancel>
+                      <AlertDialogCancel className="text-foreground">
+                        Cancelar
+                      </AlertDialogCancel>
                       <AlertDialogAction
                         onClick={handleDelete}
                         disabled={deleting}
@@ -226,20 +323,28 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 </CardTitle>
                 <Dialog open={addPkgOpen} onOpenChange={setAddPkgOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm">
+                    <Button
+                      size="sm"
+                      className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Novo Pacote
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle className="text-foreground">Adicionar Novo Pacote</DialogTitle>
+                      <DialogTitle className="text-foreground">
+                        Adicionar Novo Pacote
+                      </DialogTitle>
                       <DialogDescription>
-                        Defina o número de sessões do novo pacote para {client.name}.
+                        Defina o número de sessões do novo pacote para{" "}
+                        {client.name}.
                       </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col gap-2 py-4">
-                      <Label htmlFor="newSessions" className="text-foreground">Total de Sessões</Label>
+                      <Label htmlFor="newSessions" className="text-foreground">
+                        Total de Sessões
+                      </Label>
                       <Input
                         id="newSessions"
                         type="number"
@@ -251,10 +356,19 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                       />
                     </div>
                     <DialogFooter>
-                      <Button variant="outline" onClick={() => setAddPkgOpen(false)} className="text-foreground">
+                      <Button
+                        variant="outline"
+                        onClick={() => setAddPkgOpen(false)}
+                        className="text-foreground"
+                      >
                         Cancelar
                       </Button>
-                      <Button onClick={handleAddPackage}>Adicionar</Button>
+                      <Button
+                        onClick={handleAddPackage}
+                        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+                      >
+                        Adicionar
+                      </Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -267,16 +381,23 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                     <p className="text-lg font-semibold text-card-foreground">
                       {`Sessão ${activePackage.used_sessions} de ${activePackage.total_sessions}`}
                     </p>
-                    <Progress value={progress} className="mt-2 h-4" />
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {activePackage.total_sessions - activePackage.used_sessions > 0
+                    <Progress
+                      value={progress}
+                      className="mt-2 h-4 [&>div]:bg-primary"
+                    />
+                    <p className="mt-1 text-sm font-medium text-muted-foreground">
+                      {activePackage.total_sessions -
+                        activePackage.used_sessions >
+                      0
                         ? `${activePackage.total_sessions - activePackage.used_sessions} sessões restantes`
                         : "Pacote concluído!"}
                     </p>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {"Criado em "}
-                    {new Date(activePackage.created_at).toLocaleDateString("pt-BR")}
+                    {new Date(activePackage.created_at).toLocaleDateString(
+                      "pt-BR",
+                    )}
                   </p>
                 </div>
               ) : (
@@ -308,21 +429,32 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto rounded-md border border-border">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-muted-foreground">Data</TableHead>
-                      <TableHead className="text-muted-foreground">Horário</TableHead>
+                  <TableHeader className="bg-background">
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="text-muted-foreground font-semibold">
+                        Data do Check-in
+                      </TableHead>
+                      <TableHead className="text-muted-foreground font-semibold">
+                        Horário
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {checkIns.map((ci) => (
-                      <TableRow key={ci.id}>
-                        <TableCell className="text-foreground">
-                          {new Date(ci.date_time).toLocaleDateString("pt-BR")}
+                      <TableRow
+                        key={ci.id}
+                        className="hover:bg-[#D9C6BF]/20 transition-colors"
+                      >
+                        <TableCell className="text-foreground font-medium capitalize">
+                          {new Date(ci.date_time).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
                         </TableCell>
-                        <TableCell className="text-muted-foreground">
+                        <TableCell className="text-muted-foreground text-sm">
                           {new Date(ci.date_time).toLocaleTimeString("pt-BR", {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -338,5 +470,5 @@ export default function ClientDetailPage({ params }: { params: Promise<{ id: str
         </Card>
       </div>
     </>
-  )
+  );
 }
