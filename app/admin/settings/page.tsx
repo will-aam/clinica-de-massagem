@@ -1,24 +1,30 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { AdminHeader } from "@/components/admin-header"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { Settings, Building, MessageCircle, Palette } from "lucide-react"
-import { toast } from "sonner"
+import { useState } from "react";
+import { AdminHeader } from "@/components/admin-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Settings, Building, MessageCircle, Palette } from "lucide-react";
+import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
-  const [clinicName, setClinicName] = useState("Serenita")
-  const [whatsappEnabled, setWhatsappEnabled] = useState(true)
-  const [theme, setTheme] = useState("light")
+  const [clinicName, setClinicName] = useState("clinica");
+  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
+  const [theme, setTheme] = useState("light");
 
   const handleSave = () => {
-    toast.success("Configurações salvas com sucesso!")
-  }
+    toast.success("Configurações salvas com sucesso!");
+  };
 
   return (
     <>
@@ -31,11 +37,15 @@ export default function AdminSettingsPage() {
               <Building className="h-5 w-5 text-primary" />
               Dados da Clínica
             </CardTitle>
-            <CardDescription>Informações gerais sobre o estabelecimento</CardDescription>
+            <CardDescription>
+              Informações gerais sobre o estabelecimento
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="clinicName" className="text-card-foreground">Nome da Clínica</Label>
+              <Label htmlFor="clinicName" className="text-card-foreground">
+                Nome da Clínica
+              </Label>
               <Input
                 id="clinicName"
                 value={clinicName}
@@ -53,12 +63,16 @@ export default function AdminSettingsPage() {
               <MessageCircle className="h-5 w-5 text-primary" />
               Integração WhatsApp
             </CardTitle>
-            <CardDescription>Configure a integração com API do WhatsApp</CardDescription>
+            <CardDescription>
+              Configure a integração com API do WhatsApp
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>
-                <p className="font-medium text-card-foreground">Notificações WhatsApp</p>
+                <p className="font-medium text-card-foreground">
+                  Notificações WhatsApp
+                </p>
                 <p className="text-sm text-muted-foreground">
                   Envie lembretes automáticos para os clientes
                 </p>
@@ -71,7 +85,9 @@ export default function AdminSettingsPage() {
 
             {whatsappEnabled && (
               <div className="flex flex-col gap-2">
-                <Label htmlFor="whatsappToken" className="text-card-foreground">Token da API</Label>
+                <Label htmlFor="whatsappToken" className="text-card-foreground">
+                  Token da API
+                </Label>
                 <Input
                   id="whatsappToken"
                   type="password"
@@ -93,7 +109,9 @@ export default function AdminSettingsPage() {
               <Palette className="h-5 w-5 text-primary" />
               Aparência
             </CardTitle>
-            <CardDescription>Personalize a aparência do sistema</CardDescription>
+            <CardDescription>
+              Personalize a aparência do sistema
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-3">
@@ -133,5 +151,5 @@ export default function AdminSettingsPage() {
         </div>
       </div>
     </>
-  )
+  );
 }

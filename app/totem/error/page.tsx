@@ -1,34 +1,38 @@
-"use client"
+"use client";
 
-import { useSearchParams } from "next/navigation"
-import Link from "next/link"
-import { Suspense } from "react"
-import { AlertTriangle, ArrowLeft, Phone } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { Suspense } from "react";
+import { AlertTriangle, ArrowLeft, Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const errorMessages: Record<string, { title: string; description: string }> = {
   CPF_NOT_FOUND: {
     title: "CPF não encontrado",
-    description: "Não encontramos seu cadastro. Por favor, fale com a recepção para se cadastrar.",
+    description:
+      "Não encontramos seu cadastro. Por favor, fale com a recepção para se cadastrar.",
   },
   PACKAGE_EXHAUSTED: {
     title: "Pacote de sessões esgotado",
-    description: "Todas as sessões do seu pacote foram utilizadas. Fale com a recepção para renovar.",
+    description:
+      "Todas as sessões do seu pacote foram utilizadas. Fale com a recepção para renovar.",
   },
   NO_ACTIVE_PACKAGE: {
     title: "Nenhum pacote ativo",
-    description: "Você não possui um pacote de sessões ativo. Fale com a recepção.",
+    description:
+      "Você não possui um pacote de sessões ativo. Fale com a recepção.",
   },
   UNKNOWN: {
     title: "Erro inesperado",
-    description: "Ocorreu um problema ao processar seu check-in. Tente novamente ou fale com a recepção.",
+    description:
+      "Ocorreu um problema ao processar seu check-in. Tente novamente ou fale com a recepção.",
   },
-}
+};
 
 function ErrorContent() {
-  const searchParams = useSearchParams()
-  const errorType = searchParams.get("type") || "UNKNOWN"
-  const error = errorMessages[errorType] || errorMessages.UNKNOWN
+  const searchParams = useSearchParams();
+  const errorType = searchParams.get("type") || "UNKNOWN";
+  const error = errorMessages[errorType] || errorMessages.UNKNOWN;
 
   return (
     <div className="flex w-full max-w-md flex-col items-center gap-8 p-6 text-center">
@@ -56,7 +60,12 @@ function ErrorContent() {
           </Link>
         </Button>
 
-        <Button asChild variant="outline" size="lg" className="h-16 text-lg text-foreground">
+        <Button
+          asChild
+          variant="outline"
+          size="lg"
+          className="h-16 text-lg text-foreground"
+        >
           <Link href="/totem/idle">
             <Phone className="mr-2 h-5 w-5" />
             Falar com a Recepção
@@ -64,17 +73,19 @@ function ErrorContent() {
         </Button>
       </div>
     </div>
-  )
+  );
 }
 
 export default function TotemErrorPage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center p-6">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center p-6">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      }
+    >
       <ErrorContent />
     </Suspense>
-  )
+  );
 }

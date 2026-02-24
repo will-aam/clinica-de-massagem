@@ -1,8 +1,15 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Heart, LayoutDashboard, Users, ClipboardList, Settings, LogOut } from "lucide-react"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Heart,
+  LayoutDashboard,
+  Users,
+  ClipboardList,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,17 +21,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/admin/clients", icon: Users },
   { title: "Historico", href: "/admin/history", icon: ClipboardList },
   { title: "Configuracoes", href: "/admin/settings", icon: Settings },
-]
+];
 
 export function AdminSidebar() {
-  const pathname = usePathname()
+  const pathname = usePathname();
 
   return (
     <Sidebar>
@@ -34,20 +41,29 @@ export function AdminSidebar() {
             <Heart className="h-5 w-5 text-sidebar-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-serif text-lg font-bold text-sidebar-foreground">Serenita</h2>
-            <p className="text-xs text-sidebar-foreground/60">Painel Administrativo</p>
+            <h2 className="font-serif text-lg font-bold text-sidebar-foreground">
+              clinica
+            </h2>
+            <p className="text-xs text-sidebar-foreground/60">
+              Painel Administrativo
+            </p>
           </div>
         </Link>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/50">Menu</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/50">
+            Menu
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith(item.href)}
+                  >
                     <Link href={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -73,5 +89,5 @@ export function AdminSidebar() {
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

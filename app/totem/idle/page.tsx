@@ -36,7 +36,7 @@ export default function TotemIdlePage() {
       <div className="absolute bottom-4 right-4">
         <Link
           href="/admin/login"
-          className="p-2 text-muted-foreground/30 hover:text-muted-foreground transition-colors"
+          className="p-2 text-muted-foreground hover:text-muted-foreground transition-colors"
         >
           <Lock className="h-5 w-5" />
           <span className="sr-only">Acesso Administrativo</span>
