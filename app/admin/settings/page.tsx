@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "next-themes"; // Importante: Hook real de tema
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +19,11 @@ import { Settings, Building, MessageCircle, Palette } from "lucide-react";
 import { toast } from "sonner";
 
 export default function AdminSettingsPage() {
-  const [clinicName, setClinicName] = useState("clinica");
+  const [clinicName, setClinicName] = useState("Totten");
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
-  const [theme, setTheme] = useState("light");
+
+  // Usamos o hook do next-themes ao invés do useState local
+  const { theme, setTheme } = useTheme();
 
   const handleSave = () => {
     toast.success("Configurações salvas com sucesso!");
@@ -68,7 +71,7 @@ export default function AdminSettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
-            <div className="flex items-center justify-between rounded-lg border border-border p-4">
+            <div className="flex items-center justify-between rounded-lg border border-border p-4 bg-card">
               <div>
                 <p className="font-medium text-card-foreground">
                   Notificações WhatsApp
@@ -119,23 +122,30 @@ export default function AdminSettingsPage() {
                 onClick={() => setTheme("light")}
                 className={`flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 transition-all ${
                   theme === "light"
-                    ? "border-primary bg-card"
-                    : "border-border bg-muted"
+                    ? "border-primary bg-card ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "border-border bg-muted hover:border-primary/50"
                 }`}
               >
-                <div className="h-8 w-8 rounded-full bg-[#F2E7DC]" />
-                <span className="mt-1 text-xs text-foreground">Claro</span>
+                {/* Preview Claro - Agora branco e cinza claro */}
+                <div className="h-8 w-8 rounded-full bg-white border border-gray-200 shadow-sm" />
+                <span className="mt-1 text-xs font-medium text-foreground">
+                  Claro
+                </span>
               </button>
+
               <button
                 onClick={() => setTheme("dark")}
                 className={`flex h-20 w-20 flex-col items-center justify-center rounded-lg border-2 transition-all ${
                   theme === "dark"
-                    ? "border-primary bg-card"
-                    : "border-border bg-muted"
+                    ? "border-primary bg-card ring-2 ring-primary ring-offset-2 ring-offset-background"
+                    : "border-border bg-muted hover:border-primary/50"
                 }`}
               >
-                <div className="h-8 w-8 rounded-full bg-[#3D2C24]" />
-                <span className="mt-1 text-xs text-foreground">Escuro</span>
+                {/* Preview Escuro - Agora chumbo e preto */}
+                <div className="h-8 w-8 rounded-full bg-zinc-950 border border-zinc-800 shadow-sm" />
+                <span className="mt-1 text-xs font-medium text-foreground">
+                  Escuro
+                </span>
               </button>
             </div>
           </CardContent>
