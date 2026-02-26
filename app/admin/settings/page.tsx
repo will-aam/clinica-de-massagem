@@ -1,10 +1,12 @@
+"use client";
+
 import { AdminHeader } from "@/components/admin-header";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GeneralSettings } from "./sections/general-settings";
 import { AppearanceSettings } from "./sections/appearance-settings";
 import { MessageSettings } from "./sections/message-settings";
 import { SecuritySettings } from "./sections/security-settings";
-import { NotificationsSettings } from "./sections/notifications-settings"; // Importamos a nova aba
+import { NotificationsSettings } from "./sections/notifications-settings";
 import {
   Building,
   Palette,
@@ -12,7 +14,7 @@ import {
   ShieldCheck,
   Save,
   Bell,
-} from "lucide-react"; // Importamos o ícone de sino
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function AdminSettingsPage() {
