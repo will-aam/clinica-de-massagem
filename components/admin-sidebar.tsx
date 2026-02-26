@@ -13,8 +13,8 @@ import {
   Wallet,
   Lock,
   Headset,
-  Bell, // <-- Ícone de Notificação
-  User, // <-- Ícone de Perfil
+  Bell,
+  User,
 } from "lucide-react";
 import {
   Sidebar,
