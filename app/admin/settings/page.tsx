@@ -43,20 +43,20 @@ export default function AdminSettingsPage() {
         {/* Usamos value e onValueChange para controlar as Tabs programaticamente */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* Menu Desktop: visível apenas a partir de telas médias (hidden md:grid) */}
-          <TabsList className="hidden md:grid w-full grid-cols-5 h-auto bg-muted p-1 gap-1">
-            <TabsTrigger value="general" className="flex gap-2 py-2">
+          <TabsList className="hidden md:grid w-full grid-cols-5 bg-muted">
+            <TabsTrigger value="general" className="flex gap-2">
               <Building className="h-4 w-4" /> Geral
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="flex gap-2 py-2">
+            <TabsTrigger value="appearance" className="flex gap-2">
               <Palette className="h-4 w-4" /> Aparência
             </TabsTrigger>
-            <TabsTrigger value="messages" className="flex gap-2 py-2">
+            <TabsTrigger value="messages" className="flex gap-2">
               <MessageSquare className="h-4 w-4" /> Mensagens
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="flex gap-2 py-2">
+            <TabsTrigger value="notifications" className="flex gap-2">
               <Bell className="h-4 w-4" /> Notificações
             </TabsTrigger>
-            <TabsTrigger value="security" className="flex gap-2 py-2">
+            <TabsTrigger value="security" className="flex gap-2">
               <ShieldCheck className="h-4 w-4" /> Acesso
             </TabsTrigger>
           </TabsList>
