@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  MonitorSmartphone,
+  Bird,
   LayoutDashboard,
   Users,
   ClipboardList,
@@ -12,7 +12,9 @@ import {
   CalendarDays,
   Wallet,
   Lock,
-  Headset, // Importamos o ícone de suporte
+  Headset,
+  Bell, // <-- Ícone de Notificação
+  User, // <-- Ícone de Perfil
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +27,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const navItems = [
@@ -40,8 +43,8 @@ const moduleItems = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { setOpenMobile } = useSidebar();
 
-  // Número e mensagem formatados para o botão de suporte
   const supportPhone = "5579998752198";
   const supportMessage = encodeURIComponent(
     "Olá! Preciso de ajuda com o sistema Totten.",
@@ -51,17 +54,18 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
-        <Link href="/admin/dashboard" className="flex items-center gap-3">
+        <Link
+          href="/admin/dashboard"
+          className="flex items-center gap-3"
+          onClick={() => setOpenMobile(false)}
+        >
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <MonitorSmartphone className="h-5 w-5" />
+            <Bird className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-inter text-xl font-bold text-sidebar-foreground">
+            <h2 className="font-inter text-xl font-bold text-sidebar-foreground tracking-tight">
               Totten
             </h2>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Sistema de Gestão
-            </p>
           </div>
         </Link>
       </SidebarHeader>
@@ -81,7 +85,7 @@ export function AdminSidebar() {
                     isActive={pathname.startsWith(item.href)}
                     className="hover:bg-muted/50 transition-colors"
                   >
-                    <Link href={item.href}>
+                    <Link href={item.href} onClick={() => setOpenMobile(false)}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
@@ -110,7 +114,7 @@ export function AdminSidebar() {
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
                       </div>
-                      <span className="text-[9px] uppercase font-bold bg-muted px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
+                      <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
                         <Lock className="h-2 w-2" />
                         Em breve
                       </span>
@@ -123,15 +127,46 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="p-4 border-t">
+      {/* FOOTER TURBINADO COM PERFIL E NOTIFICAÇÕES */}
+      <SidebarFooter className="p-4 border-t flex flex-col gap-4">
+        {/* Bloco de Perfil de Usuário */}
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <User className="h-4 w-4" strokeWidth={2.5} />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-sidebar-foreground leading-none mb-1">
+                Administrador
+              </span>
+              <span className="text-[10px] text-muted-foreground leading-none">
+                admin@totten.com
+              </span>
+            </div>
+          </div>
+
+          {/* Botão de Notificações */}
+          <button className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all active:scale-95">
+            <Bell className="h-4 w-4" />
+            <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
+          </button>
+        </div>
+
+        {/* Linha divisória sutil */}
+        <div className="h-px bg-border/50 w-full" />
+
         <SidebarMenu>
-          {/* Botão de Suporte (Abre em nova aba) */}
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
               className="hover:bg-primary/10 hover:text-primary transition-colors"
             >
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setOpenMobile(false)}
+              >
                 <Headset className="h-4 w-4" />
                 <span>Suporte</span>
               </a>
@@ -144,7 +179,7 @@ export function AdminSidebar() {
               isActive={pathname.startsWith("/admin/settings")}
               className="hover:bg-muted/50 transition-colors"
             >
-              <Link href="/admin/settings">
+              <Link href="/admin/settings" onClick={() => setOpenMobile(false)}>
                 <Settings className="h-4 w-4" />
                 <span>Configurações</span>
               </Link>

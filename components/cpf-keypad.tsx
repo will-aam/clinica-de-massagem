@@ -1,48 +1,55 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { Delete } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { Delete } from "lucide-react";
 
 interface CpfKeypadProps {
-  value: string
-  onChange: (value: string) => void
-  onConfirm: () => void
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  onConfirm: () => void;
+  disabled?: boolean;
 }
 
 function formatCpf(digits: string): string {
-  const d = digits.replace(/\D/g, "").slice(0, 11)
-  if (d.length <= 3) return d
-  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`
-  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`
-  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`
+  const d = digits.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return `${d.slice(0, 3)}.${d.slice(3)}`;
+  if (d.length <= 9) return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6)}`;
+  return `${d.slice(0, 3)}.${d.slice(3, 6)}.${d.slice(6, 9)}-${d.slice(9)}`;
 }
 
-export function CpfKeypad({ value, onChange, onConfirm, disabled }: CpfKeypadProps) {
-  const digits = value.replace(/\D/g, "")
+export function CpfKeypad({
+  value,
+  onChange,
+  onConfirm,
+  disabled,
+}: CpfKeypadProps) {
+  const digits = value.replace(/\D/g, "");
 
   const handleDigit = (digit: string) => {
     if (digits.length < 11) {
-      onChange(digits + digit)
+      onChange(digits + digit);
     }
-  }
+  };
 
   const handleDelete = () => {
-    onChange(digits.slice(0, -1))
-  }
+    onChange(digits.slice(0, -1));
+  };
 
   const handleClear = () => {
-    onChange("")
-  }
+    onChange("");
+  };
 
-  const isComplete = digits.length === 11
+  const isComplete = digits.length === 11;
 
   return (
     <div className="flex w-full max-w-sm flex-col items-center gap-6">
       {/* CPF Display */}
       <div className="flex h-20 w-full items-center justify-center rounded-xl border-2 border-border bg-card px-4">
         <span className="font-mono text-3xl tracking-widest text-foreground md:text-4xl">
-          {digits.length > 0 ? formatCpf(digits) : (
+          {digits.length > 0 ? (
+            formatCpf(digits)
+          ) : (
             <span className="text-muted-foreground">000.000.000-00</span>
           )}
         </span>
@@ -106,7 +113,7 @@ export function CpfKeypad({ value, onChange, onConfirm, disabled }: CpfKeypadPro
         Confirmar
       </Button>
     </div>
-  )
+  );
 }
 
-export { formatCpf }
+export { formatCpf };
