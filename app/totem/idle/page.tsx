@@ -5,41 +5,53 @@ import { Heart, Lock } from "lucide-react";
 
 export default function TotemIdlePage() {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-10 p-8 text-center">
-      {/* Logo / Clinic Name */}
-      <div className="flex flex-col items-center gap-4">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary">
-          <Heart className="h-12 w-12 text-primary-foreground" />
+    /* h-dvh garante que a tela ocupe exatamente 100% da área visível, sem rolagem */
+    <div className="relative flex h-dvh w-full flex-col items-center justify-between p-6 pb-12 overflow-hidden bg-background">
+      {/* 1. Topo: Espaçador discreto ou logo secundária se quiser */}
+      <div className="h-10 w-full" />
+
+      {/* 2. Centro: Conteúdo Principal (Logo + Botão) */}
+      <div className="flex flex-col items-center gap-8 w-full max-w-sm animate-in fade-in zoom-in duration-700">
+        {/* Logo / Clinic Name */}
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full bg-primary">
+            <Heart className="h-10 w-10 md:h-12 md:w-12 text-primary-foreground" />
+          </div>
+          <div className="space-y-1 text-center">
+            {" "}
+            <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl">
+              Totten
+            </h1>
+            <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
+              Sua jornada de bem-estar começa aqui.
+            </p>
+          </div>
         </div>
-        <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl">
-          empresa
-        </h1>
-        <p className="max-w-sm text-lg text-muted-foreground leading-relaxed">
-          Sua jornada de bem-estar começa aqui.
-        </p>
+
+        {/* Check-in Button */}
+        <div className="w-full px-4 pt-4">
+          <Link
+            href="/totem/check-in"
+            className="flex h-20 w-full items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground hover:scale-[1.02] active:scale-95 md:h-24 md:text-2xl"
+          >
+            Fazer Check-in
+          </Link>
+          <p className="mt-4 text-xs md:text-sm text-muted-foreground animate-pulse text-center">
+            Toque para registrar sua presença
+          </p>
+        </div>
       </div>
 
-      {/* Check-in Button */}
-      <Link
-        href="/totem/check-in"
-        className="flex h-20 w-72 items-center justify-center rounded-xl bg-primary text-xl font-semibold text-primary-foreground shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-95 md:h-24 md:w-80 md:text-2xl"
-      >
-        Fazer Check-in
-      </Link>
-
-      {/* Decorative subtle text */}
-      <p className="text-sm text-muted-foreground">
-        Toque no botão para registrar sua presença
-      </p>
-
-      {/* Secret Admin Login Link */}
-      <div className="absolute bottom-4 right-4">
+      {/* 3. Rodapé: Cadeado fixo, mas visível */}
+      <div className="w-full flex justify-center items-center">
         <Link
           href="/admin/login"
-          className="p-2 text-muted-foreground hover:text-muted-foreground transition-colors"
+          className="group flex items-center gap-2 p-4 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
         >
-          <Lock className="h-5 w-5" />
-          <span className="sr-only">Acesso Administrativo</span>
+          <Lock className="h-4 w-4 transition-transform group-hover:scale-110" />
+          <span className="text-[10px] uppercase tracking-widest font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+            Acesso Restrito
+          </span>
         </Link>
       </div>
     </div>
