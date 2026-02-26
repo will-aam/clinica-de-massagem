@@ -27,6 +27,7 @@ import {
 
 export function MessageSettings() {
   const [phone, setPhone] = useState("");
+  const [showTip, setShowTip] = useState(false);
 
   // Estados para os diferentes templates
   const [msgUpdate, setMsgUpdate] = useState(
@@ -44,8 +45,10 @@ export function MessageSettings() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Card className="border-border shadow-sm">
-        <CardHeader>
+      {/* A MÁGICA RESPONSIVA AQUI */}
+      <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
+        {/* Espaçamentos dinâmicos */}
+        <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
           <CardTitle className="flex items-center gap-2 text-card-foreground">
             <MessageSquare className="h-5 w-5 text-primary" />
             Configurações de WhatsApp
@@ -55,7 +58,9 @@ export function MessageSettings() {
             aos seus clientes.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-6">
+
+        {/* Espaçamentos dinâmicos */}
+        <CardContent className="grid gap-6 px-0 pb-0 md:pb-6 md:px-6">
           {/* Número de Contato */}
           <div className="grid gap-2 border-b pb-6">
             <Label htmlFor="phone" className="text-foreground font-medium">
@@ -77,23 +82,31 @@ export function MessageSettings() {
 
           {/* Templates de Mensagem com Accordion */}
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <Label className="text-foreground font-medium text-base">
-                Modelos de Mensagens (Templates)
-              </Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>
-                      Use as variáveis entre chaves (ex: {"{nome}"}) para
-                      personalizar automaticamente.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+            <div className="mb-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-foreground font-medium text-base">
+                  Modelos de Mensagens (Templates)
+                </Label>
+                {/* Botão clicável (funciona no celular e pc) */}
+                <button
+                  type="button"
+                  onClick={() => setShowTip(!showTip)}
+                  className="text-muted-foreground hover:text-primary transition-colors p-1.5 rounded-full bg-muted/50 hover:bg-muted"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Se o botão for clicado, mostra a caixinha elegante */}
+              {showTip && (
+                <div className="bg-primary/10 text-primary px-3 py-2.5 rounded-md border border-primary/20 text-[13px] animate-in fade-in slide-in-from-top-2">
+                  💡 <b>Dica:</b> Use as variáveis entre chaves (ex:{" "}
+                  <code className="bg-background px-1 py-0.5 rounded text-primary">
+                    {"{nome}"}
+                  </code>
+                  ) para o sistema personalizar automaticamente.
+                </div>
+              )}
             </div>
 
             <Accordion
