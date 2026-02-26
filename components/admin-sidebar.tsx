@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bird, // Ícone novo para o logo
+  MonitorSmartphone,
   LayoutDashboard,
   Users,
   ClipboardList,
   Settings,
   LogOut,
-  CalendarDays, // Ícone para a Agenda
-  Wallet, // Ícone para o Financeiro
-  Lock, // Ícone de cadeado para os módulos inativos
+  CalendarDays,
+  Wallet,
+  Lock,
+  Headset, // Importamos o ícone de suporte
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,17 +41,27 @@ const moduleItems = [
 export function AdminSidebar() {
   const pathname = usePathname();
 
+  // Número e mensagem formatados para o botão de suporte
+  const supportPhone = "5579998752198";
+  const supportMessage = encodeURIComponent(
+    "Olá! Preciso de ajuda com o sistema Totten.",
+  );
+  const whatsappUrl = `https://wa.me/${supportPhone}?text=${supportMessage}`;
+
   return (
     <Sidebar>
       <SidebarHeader className="p-4 border-b">
         <Link href="/admin/dashboard" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
-            <Bird className="h-5 w-5" />
+            <MonitorSmartphone className="h-5 w-5" />
           </div>
           <div>
             <h2 className="font-inter text-xl font-bold text-sidebar-foreground">
               Totten
             </h2>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
+              Sistema de Gestão
+            </p>
           </div>
         </Link>
       </SidebarHeader>
@@ -114,7 +125,20 @@ export function AdminSidebar() {
 
       <SidebarFooter className="p-4 border-t">
         <SidebarMenu>
+          {/* Botão de Suporte (Abre em nova aba) */}
           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              className="hover:bg-primary/10 hover:text-primary transition-colors"
+            >
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                <Headset className="h-4 w-4" />
+                <span>Suporte</span>
+              </a>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem className="mt-1">
             <SidebarMenuButton
               asChild
               isActive={pathname.startsWith("/admin/settings")}
@@ -126,7 +150,8 @@ export function AdminSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem className="mt-2">
+
+          <SidebarMenuItem className="mt-1">
             <SidebarMenuButton
               asChild
               className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
