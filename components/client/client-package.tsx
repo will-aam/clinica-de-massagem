@@ -1,3 +1,4 @@
+// components/client/client-package.tsx
 "use client";
 
 import { useState } from "react";

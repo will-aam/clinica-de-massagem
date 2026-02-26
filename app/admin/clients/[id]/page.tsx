@@ -1,5 +1,5 @@
+// app/admin/clients/[id]/page.tsx
 "use client";
-// O FUTURO DA SUA PAGE (Server Component nativo, super rápido e amigável para SEO), quando a sua page.tsx virar um Server Component, ela vai apenas repassar os dados para esses botões e modais interativos. A tela carregará de forma instantânea (Server Side Rendering), mas os botões continuarão funcionando perfeitamente no celular do usuário.
 
 import { use } from "react";
 import useSWR from "swr";
