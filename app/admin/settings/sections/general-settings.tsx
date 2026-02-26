@@ -19,7 +19,7 @@ export function GeneralSettings() {
   const [formData, setFormData] = useState({
     companyName: "Totten Tecnologia LTDA",
     tradeName: "Totten",
-    document: "00.000.000/0001-00", // Substituiu o campo 'cnpj'
+    document: "00.000.000/0001-00",
     contactPhone: "(00) 0000-0000",
   });
 
@@ -32,17 +32,18 @@ export function GeneralSettings() {
     let v = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
 
     if (docType === "CPF") {
-      v = v.slice(0, 11);
+      v = v.slice(0, 11); // Limita aos 11 dígitos do CPF
       v = v.replace(/(\d{3})(\d)/, "$1.$2");
       v = v.replace(/(\d{3})(\d)/, "$1.$2");
       v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-      setFormData({ ...formData, document: v.slice(0, 14) }); // Limita a 14 caracteres
+      setFormData({ ...formData, document: v });
     } else {
+      v = v.slice(0, 14); // Limita aos 14 dígitos do CNPJ
       v = v.replace(/^(\d{2})(\d)/, "$1.$2");
       v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
       v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
       v = v.replace(/(\d{4})(\d)/, "$1-$2");
-      setFormData({ ...formData, document: v.slice(0, 18) }); // Limita a 18 caracteres
+      setFormData({ ...formData, document: v });
     }
   };
 
@@ -67,8 +68,9 @@ export function GeneralSettings() {
   };
 
   return (
-    <Card className="border-border shadow-sm">
-      <CardHeader>
+    <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
+      {/* Removemos o espaçamento lateral (padding) no mobile, mas mantemos no desktop (md:px-6) */}
+      <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
         <CardTitle className="flex items-center gap-2 text-card-foreground">
           <Building className="h-5 w-5 text-primary" />
           Dados da Empresa
@@ -77,11 +79,13 @@ export function GeneralSettings() {
           Configure as informações principais da sua empresa.
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6">
+
+      {/* Mesma lógica de remover padding lateral no mobile para ocupar a tela toda */}
+      <CardContent className="grid gap-6 px-0 pb-0 md:pb-6 md:px-6">
         {/* Nomes da Empresa */}
         <div className="grid gap-2">
           <Label htmlFor="tradeName" className="font-medium">
-            Nome de Exibição do Sistema
+            Nome de Exibição (Visível para os clientes)
           </Label>
           <Input
             id="tradeName"
@@ -89,13 +93,16 @@ export function GeneralSettings() {
             onChange={(e) =>
               setFormData({ ...formData, tradeName: e.target.value })
             }
-            placeholder="Ex: Minha Clínica"
+            placeholder="Ex: Minha Empresa"
           />
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <div className="grid gap-2">
-            <Label htmlFor="companyName">Razão Social / Nome Completo</Label>
+            {/* A MÁGICA DO LABEL: Altera entre Razão Social e Nome Completo dinamicamente */}
+            <Label htmlFor="companyName">
+              {docType === "CNPJ" ? "Razão Social" : "Nome Completo"}
+            </Label>
             <Input
               id="companyName"
               value={formData.companyName}
