@@ -34,9 +34,9 @@ import { cn } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-// 1. Tipo de dado
 type CheckIn = {
   id: string;
+  client_id: string;
   client_name: string;
   date_time: string;
 };
@@ -83,6 +83,8 @@ function KpiCard({
 }
 
 // 3. Componente de Item de Lista (Com o Menu Dropdown)
+import Link from "next/link"; // Adicione este import no topo
+
 function CheckInListItem({ checkIn }: { checkIn: CheckIn }) {
   const date = new Date(checkIn.date_time);
   const formattedDate = date.toLocaleDateString("pt-BR", {
@@ -116,7 +118,6 @@ function CheckInListItem({ checkIn }: { checkIn: CheckIn }) {
           {formattedTime}
         </span>
 
-        {/* MÁGICA DOS 3 PONTINHOS: Dropdown Menu Estático */}
         <DropdownMenu>
           <DropdownMenuTrigger className="p-2 outline-none rounded-full hover:bg-muted transition-colors">
             <MoreVertical className="h-4 w-4 text-muted-foreground" />
@@ -126,10 +127,18 @@ function CheckInListItem({ checkIn }: { checkIn: CheckIn }) {
               Ações
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer gap-2">
-              <User className="h-4 w-4" />
-              <span>Ver Perfil</span>
+
+            {/* LINK PARA O PERFIL AQUI */}
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/admin/clients/${checkIn.client_id}`}
+                className="flex cursor-pointer items-center gap-2 w-full"
+              >
+                <User className="h-4 w-4" />
+                <span>Ver Perfil</span>
+              </Link>
             </DropdownMenuItem>
+
             <DropdownMenuItem className="cursor-pointer gap-2">
               <MessageCircle className="h-4 w-4" />
               <span>Enviar WhatsApp</span>
@@ -177,9 +186,9 @@ export default function AdminDashboardPage() {
         <div className="flex overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-smooth md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:px-0 md:mx-0 gap-4 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
             <>
-              <Skeleton className="h-35w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
-              <Skeleton className="h-35 min-w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
-              <Skeleton className="h-35 min-w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 snap-center rounded-xl shrink-0" />
             </>
           ) : (
             <>
