@@ -12,7 +12,7 @@ export default function TotemIdlePage() {
           <Heart className="h-12 w-12 text-primary-foreground" />
         </div>
         <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl">
-          Clínica
+          empresa
         </h1>
         <p className="max-w-sm text-lg text-muted-foreground leading-relaxed">
           Sua jornada de bem-estar começa aqui.

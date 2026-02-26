@@ -17,7 +17,7 @@ export function AppearanceSettings() {
   // Função para chamar você no WhatsApp (coloque o seu número aqui depois)
   const handleRequestTheme = () => {
     const message = encodeURIComponent(
-      "Olá! Gostaria de solicitar um tema personalizado com as cores da minha clínica para o sistema Totten.",
+      "Olá! Gostaria de solicitar um tema personalizado com as cores da minha empresa para o sistema Totten.",
     );
     window.open(`https://wa.me/557991552156?text=${message}`, "_blank");
   };
@@ -76,7 +76,7 @@ export function AppearanceSettings() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-primary text-lg">
             <Sparkles className="h-5 w-5" />
-            Deixe o Totten com a cara da sua clínica!
+            Deixe o Totten com a cara da sua empresa!
           </CardTitle>
           <CardDescription className="text-foreground/80">
             Quer sair do padrão? Nós criamos um tema exclusivo utilizando as

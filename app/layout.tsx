@@ -18,7 +18,7 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Totten - Sistema de Gestão",
   description:
-    "Sistema de gestão de check-ins e pacotes de sessões para clínicas.",
+    "Sistema de gestão de check-ins e pacotes de sessões para empresas.",
 };
 
 export const viewport: Viewport = {
