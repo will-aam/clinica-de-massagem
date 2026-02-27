@@ -15,6 +15,7 @@ import {
   Headset,
   Bell,
   User,
+  ChevronRight,
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,8 +28,16 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -36,9 +45,16 @@ const navItems = [
   { title: "Histórico", href: "/admin/history", icon: ClipboardList },
 ];
 
-const moduleItems = [
-  { title: "Agenda", href: "#", icon: CalendarDays, comingSoon: true },
-  { title: "Financeiro", href: "#", icon: Wallet, comingSoon: true },
+// Sub-itens do financeiro (apenas texto, minimalista)
+const financeSubItems = [
+  "Dashboard Financeiro",
+  "Títulos a Receber",
+  "Meios de Pagamento",
+  "Gestão de Comissões",
+  "Pacotes e Planos",
+  "Despesas",
+  "Análises (Analytics)",
+  "Relatórios",
 ];
 
 export function AdminSidebar() {
@@ -96,40 +112,71 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Módulos Adicionais (Em Breve) */}
+        {/* Módulos Adicionais (Agenda e Financeiro com Dropdown) */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
             Módulos Extras
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {moduleItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    className="opacity-60 cursor-not-allowed hover:bg-transparent"
-                    asChild
-                  >
-                    <div className="flex items-center justify-between w-full">
-                      <div className="flex items-center gap-2">
-                        <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
-                      </div>
-                      <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
-                        <Lock className="h-2 w-2" />
-                        Em breve
-                      </span>
+              {/* Agenda - Simples */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  className="opacity-60 cursor-not-allowed hover:bg-transparent"
+                  asChild
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4" />
+                      <span>Agenda</span>
                     </div>
-                  </SidebarMenuButton>
+                    <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
+                      <Lock className="h-2 w-2" />
+                      Em breve
+                    </span>
+                  </div>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Financeiro - Com Leque de Opções */}
+              <Collapsible className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="hover:bg-muted/50">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <Wallet className="h-4 w-4" />
+                          <span>Financeiro</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1 group-data-[state=open]/collapsible:hidden">
+                            <Lock className="h-2 w-2" />
+                            Em breve
+                          </span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </div>
+                      </div>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub className="border-l border-border ml-4 mt-1">
+                      {financeSubItems.map((subItem) => (
+                        <SidebarMenuSubItem key={subItem}>
+                          <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
+                            <span className="text-xs">{subItem}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
                 </SidebarMenuItem>
-              ))}
+              </Collapsible>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      {/* FOOTER TURBINADO COM PERFIL E NOTIFICAÇÕES */}
       <SidebarFooter className="p-4 border-t flex flex-col gap-4">
-        {/* Bloco de Perfil de Usuário */}
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -144,15 +191,12 @@ export function AdminSidebar() {
               </span>
             </div>
           </div>
-
-          {/* Botão de Notificações */}
           <button className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all active:scale-95">
             <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
           </button>
         </div>
 
-        {/* Linha divisória sutil */}
         <div className="h-px bg-border/50 w-full" />
 
         <SidebarMenu>
