@@ -16,7 +16,7 @@ import {
   Bell,
   User,
   ChevronRight,
-  UserCog, // <-- Adicionamos o ícone de Serviços aqui
+  UserCog,
 } from "lucide-react";
 import {
   Sidebar,
@@ -40,12 +40,22 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
-// Atualizamos a lista do Menu Principal com "Serviços"
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/admin/clients", icon: Users },
-  { title: "Serviços", href: "/admin/services", icon: UserCog }, // <-- O novo item
+  { title: "Serviços", href: "/admin/services", icon: UserCog },
   { title: "Histórico", href: "/admin/history", icon: ClipboardList },
+];
+
+// Sub-itens da Agenda baseados no seu mapeamento
+const agendaSubItems = [
+  "Calendário",
+  "Novo Agendamento",
+  "Agendamentos Recorrentes",
+  "Bloqueio de Horário",
+  "Lista de Espera",
+  "Confirmações e Lembretes",
+  "Fichas de Anamnese",
 ];
 
 const financeSubItems = [
@@ -88,7 +98,8 @@ export function AdminSidebar() {
         </Link>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {" "}
         {/* Menu Principal */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -113,7 +124,6 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
         {/* Módulos Adicionais (Agenda e Financeiro com Dropdown) */}
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -121,24 +131,39 @@ export function AdminSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Agenda - Simples */}
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  className="opacity-60 cursor-not-allowed hover:bg-transparent"
-                  asChild
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="h-4 w-4" />
-                      <span>Agenda</span>
-                    </div>
-                    <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1">
-                      <Lock className="h-2 w-2" />
-                      Em breve
-                    </span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {/* Agenda - Com Leque de Opções */}
+              <Collapsible className="group/collapsible">
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="hover:bg-muted/50">
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2">
+                          <CalendarDays className="h-4 w-4" />
+                          <span>Agenda</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1 group-data-[state=open]/collapsible:hidden">
+                            <Lock className="h-2 w-2" />
+                            Em breve
+                          </span>
+                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                        </div>
+                      </div>
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub className="border-l border-border ml-4 mt-1">
+                      {agendaSubItems.map((subItem) => (
+                        <SidebarMenuSubItem key={subItem}>
+                          <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
+                            <span className="text-xs">{subItem}</span>
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
               {/* Financeiro - Com Leque de Opções */}
               <Collapsible className="group/collapsible">
