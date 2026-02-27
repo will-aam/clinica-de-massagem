@@ -1,6 +1,7 @@
+// components/client/client-contact.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { mutate } from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Phone,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   MessageCircle,
   Mail,
   Trash2,
@@ -47,11 +55,34 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
 
   const clientEmail = (client as any).email || "";
-  const [editPhone, setEditPhone] = useState(client.phone_whatsapp);
+  const [editPhone, setEditPhone] = useState(client.phone_whatsapp || "");
   const [editEmail, setEditEmail] = useState(clientEmail);
+
+  // --- LÓGICA DAS MENSAGENS DE WHATSAPP ---
+  const [templates, setTemplates] = useState({
+    msgUpdate:
+      "Olá, {nome}! Tudo bem? 💆‍♀️✨\n\nPassando para avisar que seu check-in foi registrado.",
+    msgWelcome: "Olá, {nome}! Que alegria ter você aqui na nossa empresa. 🥰",
+    msgRenewal:
+      "Parabéns, {nome}! 🎉 Você concluiu hoje a última sessão do seu pacote.",
+    msgReminder:
+      "Oi, {nome}! Passando para lembrar do nosso horário agendado. 👍",
+  });
+
+  // Carrega as configurações do LocalStorage quando o componente monta
+  useEffect(() => {
+    const savedTemplates = localStorage.getItem("whatsapp_templates");
+    if (savedTemplates) {
+      try {
+        const parsed = JSON.parse(savedTemplates);
+        setTemplates((prev) => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error("Erro ao carregar templates do WhatsApp", e);
+      }
+    }
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -60,8 +91,8 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: client.name, // Mantém o nome atual
-          cpf: client.cpf, // Mantém o CPF atual
+          name: client.name,
+          cpf: client.cpf,
           phone_whatsapp: editPhone,
           email: editEmail,
         }),
@@ -78,14 +109,35 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
     }
   };
 
-  const handleWhatsApp = () => {
-    const phone = client.phone_whatsapp.replace(/\D/g, "");
-    const name = client.name.split(" ")[0];
-    const message = `Olá, ${name}! Tudo bem? 💆‍♀️✨`;
-    window.open(
-      `https://wa.me/55${phone}?text=${encodeURIComponent(message)}`,
-      "_blank",
-    );
+  // Função mágica que troca as variáveis pelo texto real
+  const formatMessage = (template: string) => {
+    // Pegar quantidade de sessões (se o cliente não tiver pacote, assume 0)
+    const totalSessoes = activePackage?.total_sessions || 10;
+    const usadas = activePackage?.used_sessions || 0;
+    const nomeCurto = client.name.split(" ")[0];
+
+    return template
+      .replace(/{nome}/g, nomeCurto)
+      .replace(/{usadas}/g, usadas.toString())
+      .replace(/{total}/g, totalSessoes.toString())
+      .replace(/{horario}/g, "09:00"); // Mock de horário
+  };
+
+  const handleSendWhatsApp = (templateText: string) => {
+    // Limpa a formatação visual (ex: "(11) 98888-7777" vira "11988887777")
+    const cleanPhone = client.phone_whatsapp?.replace(/\D/g, "");
+
+    if (!cleanPhone || cleanPhone.length < 10) {
+      toast.error(
+        "O cliente não possui um número de WhatsApp válido cadastrado.",
+      );
+      return;
+    }
+
+    const message = formatMessage(templateText);
+    const whatsappUrl = `https://api.whatsapp.com/send?phone=55${cleanPhone}&text=${encodeURIComponent(message)}`;
+
+    window.open(whatsappUrl, "_blank");
   };
 
   const handleEmail = () => {
@@ -155,7 +207,7 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => {
-                        /* função delete */
+                        /* função delete (não alterada) */
                       }}
                       className="bg-destructive text-white"
                     >
@@ -195,12 +247,75 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              onClick={handleWhatsApp}
-              className="bg-[#25D366] text-white hover:bg-[#128C7E] rounded-full flex-1 h-12 text-base"
-            >
-              <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
-            </Button>
+            {/* NOVO: DROPDOWN MENU NO LUGAR DO BOTÃO SIMPLES */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-[#25D366] text-white hover:bg-[#128C7E] rounded-full flex-1 h-12 text-base">
+                  <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-70">
+                <DropdownMenuLabel>Qual mensagem enviar?</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={() => handleSendWhatsApp(templates.msgUpdate)}
+                  className="cursor-pointer py-2"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium text-sm">
+                      Atualização (Check-in)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground line-clamp-1">
+                      Olá {client.name.split(" ")[0]}, seu check-in...
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleSendWhatsApp(templates.msgWelcome)}
+                  className="cursor-pointer py-2"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium text-sm">
+                      Boas-vindas (Novo)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground line-clamp-1">
+                      Que alegria ter você aqui...
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleSendWhatsApp(templates.msgRenewal)}
+                  className="cursor-pointer py-2"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium text-sm">
+                      Renovação de Pacote
+                    </span>
+                    <span className="text-[10px] text-muted-foreground line-clamp-1">
+                      Você concluiu a última sessão...
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem
+                  onClick={() => handleSendWhatsApp(templates.msgReminder)}
+                  className="cursor-pointer py-2"
+                >
+                  <div className="flex flex-col gap-1">
+                    <span className="font-medium text-sm">
+                      Lembrete de Agenda
+                    </span>
+                    <span className="text-[10px] text-muted-foreground line-clamp-1">
+                      Passando para lembrar do nosso...
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button
               variant="outline"
               onClick={handleEmail}

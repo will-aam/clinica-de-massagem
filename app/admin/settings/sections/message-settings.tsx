@@ -1,9 +1,11 @@
+// app/admin/settings/sections/message-settings.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -17,15 +19,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { MessageSquare, HelpCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { MessageSquare, HelpCircle, Save } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 export function MessageSettings() {
+  const { toast } = useToast();
   const [phone, setPhone] = useState("");
   const [showTip, setShowTip] = useState(false);
 
@@ -43,40 +41,83 @@ export function MessageSettings() {
     "Oi, {nome}! Passando para lembrar do nosso horário agendado para amanhã às {horario}. \n\nPodemos confirmar sua presença? 👍",
   );
 
+  // Carrega as configurações salvas (se existirem)
+  useEffect(() => {
+    const savedTemplates = localStorage.getItem("whatsapp_templates");
+    if (savedTemplates) {
+      try {
+        const parsed = JSON.parse(savedTemplates);
+        if (parsed.phone) setPhone(parsed.phone);
+        if (parsed.msgUpdate) setMsgUpdate(parsed.msgUpdate);
+        if (parsed.msgWelcome) setMsgWelcome(parsed.msgWelcome);
+        if (parsed.msgRenewal) setMsgRenewal(parsed.msgRenewal);
+        if (parsed.msgReminder) setMsgReminder(parsed.msgReminder);
+      } catch (e) {
+        console.error("Erro ao carregar templates", e);
+      }
+    }
+  }, []);
+
+  // Salva no LocalStorage
+  const handleSave = () => {
+    const templatesToSave = {
+      phone,
+      msgUpdate,
+      msgWelcome,
+      msgRenewal,
+      msgReminder,
+    };
+
+    localStorage.setItem("whatsapp_templates", JSON.stringify(templatesToSave));
+
+    toast({
+      title: "Mensagens salvas!",
+      description: "Os modelos de WhatsApp foram atualizados com sucesso.",
+    });
+  };
+
   return (
     <div className="flex flex-col gap-6">
-      {/* A MÁGICA RESPONSIVA AQUI */}
       <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
-        {/* Espaçamentos dinâmicos */}
         <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
-          <CardTitle className="flex items-center gap-2 text-card-foreground">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            Configurações de WhatsApp
-          </CardTitle>
-          <CardDescription>
-            Defina o seu número e personalize os textos que o sistema enviará
-            aos seus clientes.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-card-foreground">
+                <MessageSquare className="h-5 w-5 text-primary" />
+                Configurações de WhatsApp
+              </CardTitle>
+              <CardDescription className="mt-1.5">
+                Defina o seu número e personalize os textos que o sistema
+                enviará aos seus clientes.
+              </CardDescription>
+            </div>
+
+            {/* Botão de Salvar Global da Seção */}
+            <Button onClick={handleSave} className="shrink-0">
+              <Save className="h-4 w-4 mr-2" />
+              Salvar WhatsApp
+            </Button>
+          </div>
         </CardHeader>
 
-        {/* Espaçamentos dinâmicos */}
         <CardContent className="grid gap-6 px-0 pb-0 md:pb-6 md:px-6">
           {/* Número de Contato */}
           <div className="grid gap-2 border-b pb-6">
             <Label htmlFor="phone" className="text-foreground font-medium">
-              Seu Número de WhatsApp
+              Seu Número de WhatsApp (Remetente)
             </Label>
             <div className="flex gap-2">
               <Input
                 id="phone"
-                placeholder="(00) 00000-0000"
+                placeholder="Ex: 5511999999999"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 className="max-w-xs bg-muted"
               />
             </div>
             <p className="text-xs text-muted-foreground">
-              Este é o número que o sistema usará para disparar as mensagens.
+              Deixe em branco se for usar o número do aparelho que está logado.
+              Coloque o código do país (ex: 55).
             </p>
           </div>
 
@@ -87,7 +128,6 @@ export function MessageSettings() {
                 <Label className="text-foreground font-medium text-base">
                   Modelos de Mensagens (Templates)
                 </Label>
-                {/* Botão clicável (funciona no celular e pc) */}
                 <button
                   type="button"
                   onClick={() => setShowTip(!showTip)}
@@ -97,14 +137,13 @@ export function MessageSettings() {
                 </button>
               </div>
 
-              {/* Se o botão for clicado, mostra a caixinha elegante */}
               {showTip && (
                 <div className="bg-primary/10 text-primary px-3 py-2.5 rounded-md border border-primary/20 text-[13px] animate-in fade-in slide-in-from-top-2">
                   💡 <b>Dica:</b> Use as variáveis entre chaves (ex:{" "}
                   <code className="bg-background px-1 py-0.5 rounded text-primary">
                     {"{nome}"}
                   </code>
-                  ) para o sistema personalizar automaticamente.
+                  ) para o sistema personalizar automaticamente antes de enviar.
                 </div>
               )}
             </div>
@@ -176,7 +215,7 @@ export function MessageSettings() {
 
               <AccordionItem value="item-4" className="px-4 border-0">
                 <AccordionTrigger className="hover:no-underline hover:text-primary transition-colors">
-                  4. Lembrete de Agendamento (Em Breve)
+                  4. Lembrete de Agendamento
                 </AccordionTrigger>
                 <AccordionContent className="pb-4">
                   <Textarea
@@ -186,10 +225,8 @@ export function MessageSettings() {
                     className="resize-none bg-muted focus-visible:ring-primary"
                   />
                   <p className="text-xs text-muted-foreground mt-2">
-                    Será integrada com o futuro módulo de Agenda. <br />
-                    Variáveis: <code className="text-primary">
-                      {"{nome}"}
-                    </code>, <code className="text-primary">{"{horario}"}</code>
+                    Variáveis: <code className="text-primary">{"{nome}"}</code>,{" "}
+                    <code className="text-primary">{"{horario}"}</code>
                   </p>
                 </AccordionContent>
               </AccordionItem>
