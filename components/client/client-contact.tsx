@@ -71,7 +71,6 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
       "Oi, {nome}! Passando para lembrar do nosso horário agendado. 👍",
   });
 
-  // Carrega as configurações do LocalStorage quando o componente monta
   useEffect(() => {
     const savedTemplates = localStorage.getItem("whatsapp_templates");
     if (savedTemplates) {
@@ -109,9 +108,7 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
     }
   };
 
-  // Função mágica que troca as variáveis pelo texto real
   const formatMessage = (template: string) => {
-    // Pegar quantidade de sessões (se o cliente não tiver pacote, assume 0)
     const totalSessoes = activePackage?.total_sessions || 10;
     const usadas = activePackage?.used_sessions || 0;
     const nomeCurto = client.name.split(" ")[0];
@@ -120,11 +117,10 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
       .replace(/{nome}/g, nomeCurto)
       .replace(/{usadas}/g, usadas.toString())
       .replace(/{total}/g, totalSessoes.toString())
-      .replace(/{horario}/g, "09:00"); // Mock de horário
+      .replace(/{horario}/g, "09:00");
   };
 
   const handleSendWhatsApp = (templateText: string) => {
-    // Limpa a formatação visual (ex: "(11) 98888-7777" vira "11988887777")
     const cleanPhone = client.phone_whatsapp?.replace(/\D/g, "");
 
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -207,7 +203,7 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
                     <AlertDialogCancel>Cancelar</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => {
-                        /* função delete (não alterada) */
+                        /* função delete */
                       }}
                       className="bg-destructive text-white"
                     >
@@ -222,35 +218,41 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
       </CardHeader>
 
       <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
+        {/* A MÁGICA VISUAL ACONTECE AQUI */}
         {isEditing ? (
-          <div className="flex flex-col gap-4 animate-in fade-in duration-300">
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">
-                WhatsApp
-              </label>
+          <div className="flex flex-col sm:flex-row gap-3 animate-in fade-in zoom-in-95 duration-200">
+            {/* Input WhatsApp substituindo o botão */}
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <MessageCircle className="h-5 w-5 text-[#25D366]" />
+              </div>
               <Input
                 value={editPhone}
                 onChange={(e) => setEditPhone(formatPhoneInput(e.target.value))}
-                className="bg-muted/50"
+                placeholder="(00) 00000-0000"
+                className="pl-12 rounded-full h-12 text-base border-[#25D366]/40 focus-visible:ring-[#25D366]/50 bg-muted/30 shadow-sm transition-all"
+                autoFocus
               />
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">
-                E-mail
-              </label>
+
+            {/* Input E-mail substituindo o botão */}
+            <div className="relative flex-1">
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <Mail className="h-5 w-5 text-primary" />
+              </div>
               <Input
                 value={editEmail}
                 onChange={(e) => setEditEmail(e.target.value)}
-                className="bg-muted/50"
+                placeholder="cliente@email.com"
+                className="pl-12 rounded-full h-12 text-base border-primary/30 focus-visible:ring-primary/50 bg-muted/30 shadow-sm transition-all"
               />
             </div>
           </div>
         ) : (
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* NOVO: DROPDOWN MENU NO LUGAR DO BOTÃO SIMPLES */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button className="bg-[#25D366] text-white hover:bg-[#128C7E] rounded-full flex-1 h-12 text-base">
+                <Button className="bg-[#25D366] text-white hover:bg-[#128C7E] rounded-full flex-1 h-12 text-base shadow-sm transition-all">
                   <MessageCircle className="mr-2 h-5 w-5" /> WhatsApp
                 </Button>
               </DropdownMenuTrigger>
@@ -319,7 +321,7 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
             <Button
               variant="outline"
               onClick={handleEmail}
-              className="rounded-full flex-1 h-12 text-base border-primary/20"
+              className="rounded-full flex-1 h-12 text-base border-primary/20 shadow-sm transition-all hover:bg-primary/5"
             >
               <Mail className="mr-2 h-5 w-5 text-primary" /> E-mail
             </Button>
