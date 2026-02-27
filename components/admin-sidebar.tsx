@@ -16,6 +16,7 @@ import {
   Bell,
   User,
   ChevronRight,
+  UserCog, // <-- Adicionamos o ícone de Serviços aqui
 } from "lucide-react";
 import {
   Sidebar,
@@ -39,13 +40,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// Atualizamos a lista do Menu Principal com "Serviços"
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/admin/clients", icon: Users },
+  { title: "Serviços", href: "/admin/services", icon: UserCog }, // <-- O novo item
   { title: "Histórico", href: "/admin/history", icon: ClipboardList },
 ];
 
-// Sub-itens do financeiro (apenas texto, minimalista)
 const financeSubItems = [
   "Dashboard Financeiro",
   "Títulos a Receber",
