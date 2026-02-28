@@ -1,4 +1,3 @@
-// components/client/client-package.tsx
 "use client";
 
 import { useState } from "react";
@@ -17,9 +16,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Package, Plus } from "lucide-react";
+import { Package, Plus, Award } from "lucide-react"; // Adicionado o Award (Medalha)
 import { toast } from "sonner";
 import type { Package as PackageType } from "@/lib/data";
+
+// Importando o novo componente do Voucher
+import { PackageVoucher } from "./package-voucher";
 
 interface ClientPackageProps {
   clientId: string;
@@ -35,127 +37,89 @@ export function ClientPackage({
   const [newSessions, setNewSessions] = useState("10");
   const [addPkgOpen, setAddPkgOpen] = useState(false);
 
+  // Estado para controlar a abertura do modal do comprovante
+  const [voucherOpen, setVoucherOpen] = useState(false);
+
   const progress = activePackage
     ? Math.round(
         (activePackage.used_sessions / activePackage.total_sessions) * 100,
       )
     : 0;
 
+  // Verifica se terminou todas as sessões
+  const isCompleted = activePackage
+    ? activePackage.used_sessions >= activePackage.total_sessions
+    : false;
+
   const handleAddPackage = async () => {
-    try {
-      const res = await fetch(`/api/clients/${clientId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ total_sessions: Number(newSessions) }),
-      });
-      if (res.ok) {
-        toast.success("Novo pacote adicionado!");
-        setAddPkgOpen(false);
-        mutate(`/api/clients/${clientId}`); // Atualiza apenas os dados deste cliente!
-      } else {
-        toast.error("Erro ao adicionar pacote");
-      }
-    } catch {
-      toast.error("Erro de conexão");
-    }
+    // ... (sua lógica original de adicionar pacote fica igual)
   };
 
   return (
-    <Card className="md:col-span-1 border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
-      <CardHeader className="px-0 pt-0 md:pt-6 md:px-6 pb-3 md:pb-6 flex flex-row items-center justify-between">
-        <CardTitle className="text-lg flex items-center gap-2 text-foreground">
-          <Package className="h-5 w-5 text-primary" /> Pacote Atual
-        </CardTitle>
-        <Dialog open={addPkgOpen} onOpenChange={setAddPkgOpen}>
-          <DialogTrigger asChild>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="rounded-full text-primary bg-primary/10 hover:bg-primary/20 h-8 w-8"
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md rounded-xl">
-            <DialogHeader>
-              <DialogTitle>Adicionar Novo Pacote</DialogTitle>
-              <DialogDescription>
-                Inicie um novo ciclo de sessões para {clientName.split(" ")[0]}.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex flex-col gap-2 py-4">
-              <Label htmlFor="newSessions">Total de Sessões Compradas</Label>
-              <Input
-                id="newSessions"
-                type="number"
-                min="1"
-                max="50"
-                value={newSessions}
-                onChange={(e) => setNewSessions(e.target.value)}
-                className="bg-muted text-lg h-12 font-bold text-center"
-              />
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setAddPkgOpen(false)}
-                className="w-full sm:w-auto rounded-full"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleAddPackage}
-                className="w-full sm:w-auto rounded-full"
-              >
-                Confirmar
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardHeader>
+    <>
+      <Card className="md:col-span-1 border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
+        {/* ... (Header do card continua igual) ... */}
 
-      <CardContent className="px-0 pb-0 md:pb-6 md:px-6">
-        {activePackage ? (
-          <div className="flex flex-col gap-4 bg-primary/5 p-4 md:p-5 rounded-xl border border-primary/10 relative overflow-hidden">
-            <div className="relative z-10">
-              <div className="flex justify-between items-end mb-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Progresso
-                </span>
-                <span className="text-2xl font-bold text-foreground leading-none">
-                  {activePackage.used_sessions}{" "}
-                  <span className="text-base text-muted-foreground font-normal">
-                    / {activePackage.total_sessions}
+        <CardContent className="px-0 pb-0 md:pb-6 md:px-6">
+          {activePackage ? (
+            <div className="flex flex-col gap-4 bg-primary/5 p-4 md:p-5 rounded-xl border border-primary/10 relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex justify-between items-end mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Progresso
                   </span>
-                </span>
+                  <span className="text-2xl font-bold text-foreground leading-none">
+                    {activePackage.used_sessions}{" "}
+                    <span className="text-base text-muted-foreground font-normal">
+                      / {activePackage.total_sessions}
+                    </span>
+                  </span>
+                </div>
+
+                <Progress
+                  value={progress}
+                  className="h-2.5 bg-primary/20 [&>div]:bg-primary rounded-full"
+                />
+
+                <div className="mt-4 flex flex-col gap-3">
+                  <p className="text-[13px] font-medium text-muted-foreground">
+                    {!isCompleted
+                      ? `Restam ${activePackage.total_sessions - activePackage.used_sessions} sessões para finalizar.`
+                      : "Pacote 100% concluído! 🎉"}
+                  </p>
+
+                  {/* BOTÃO MÁGICO DO COMPROVANTE */}
+                  {isCompleted && (
+                    <Button
+                      onClick={() => setVoucherOpen(true)}
+                      className="w-full rounded-full shadow-sm bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+                    >
+                      <Award className="mr-2 h-4 w-4" />
+                      Gerar Comprovante
+                    </Button>
+                  )}
+                </div>
               </div>
-              <Progress
-                value={progress}
-                className="h-2.5 bg-primary/20 [&>div]:bg-primary rounded-full"
-              />
-              <p className="mt-3 text-[13px] font-medium text-muted-foreground">
-                {activePackage.total_sessions - activePackage.used_sessions > 0
-                  ? `Restam ${activePackage.total_sessions - activePackage.used_sessions} sessões para finalizar.`
-                  : "Pacote 100% concluído! 🎉"}
-              </p>
             </div>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-center bg-muted/30 rounded-xl border border-dashed border-border">
-            <Package className="h-10 w-10 text-muted-foreground/40" />
-            <p className="mt-3 text-sm text-muted-foreground px-4">
-              Nenhum pacote ativo.
-            </p>
-            <Button
-              variant="link"
-              onClick={() => setAddPkgOpen(true)}
-              className="text-primary mt-1"
-            >
-              Adicionar agora
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          ) : (
+            // ... (estado sem pacote continua igual) ...
+            <div className="flex flex-col items-center justify-center py-8 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+              {/* ... */}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Renderiza o Modal do Comprovante (escondido até clicar no botão) */}
+      {activePackage && (
+        <PackageVoucher
+          open={voucherOpen}
+          onOpenChange={setVoucherOpen}
+          clientName={clientName}
+          packageName="Pacote de Massagem" // No futuro, puxar o nome real do pacote do BD
+          totalSessions={activePackage.total_sessions}
+        />
+      )}
+    </>
   );
 }
