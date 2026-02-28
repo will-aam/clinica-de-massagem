@@ -29,7 +29,6 @@ import {
   CalendarClock,
   ReceiptText,
   AlertCircle,
-  Pencil,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -45,13 +44,11 @@ export function AppointmentDetailsModal({
   onOpenChange,
   appointment,
 }: AppointmentDetailsModalProps) {
-  // Estados para controlar os novos campos que você pediu!
   const [status, setStatus] = useState("a_confirmar");
   const [payment, setPayment] = useState("nenhum");
   const [obs, setObs] = useState("");
-  const [hasCharge, setHasCharge] = useState(false); // A famosa "Cobrança" (borda vermelha)
+  const [hasCharge, setHasCharge] = useState(false);
 
-  // Quando abrir um agendamento diferente, reseta os dados
   useEffect(() => {
     if (appointment) {
       setStatus(appointment.status || "a_confirmar");
@@ -63,7 +60,6 @@ export function AppointmentDetailsModal({
 
   if (!appointment) return null;
 
-  // Calcula hora de término para ficar mais legível
   const calculateEndTime = (start: string, duration: number) => {
     const [h, m] = start.split(":").map(Number);
     const date = new Date();
@@ -89,65 +85,59 @@ export function AppointmentDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "sm:max-w-125 transition-colors duration-300",
+          "w-[95vw] sm:max-w-125 p-4 sm:p-6 rounded-2xl transition-colors duration-300 flex flex-col max-h-[90dvh]",
           hasCharge
-            ? "border-2 border-destructive shadow-[0_0_15px_rgba(239,68,68,0.1)]"
+            ? "border-2 border-destructive shadow-[0_0_15px_rgba(239,68,68,0.15)]"
             : "",
         )}
       >
-        <DialogHeader className="mb-2">
-          <div className="flex items-start justify-between pr-6">
-            <div className="flex flex-col gap-1">
-              <DialogTitle className="text-xl font-bold flex items-center gap-2">
-                <User className="h-5 w-5 text-primary" />
-                {appointment.clientName}
-                {hasCharge && (
-                  <Badge
-                    variant="destructive"
-                    className="ml-2 text-[10px] animate-pulse"
-                  >
-                    Pendente
-                  </Badge>
-                )}
-              </DialogTitle>
-              <p className="text-muted-foreground font-medium text-sm flex items-center gap-2">
+        <DialogHeader className="mb-1 shrink-0 text-left">
+          <div className="flex flex-col gap-1.5">
+            <DialogTitle className="text-lg sm:text-xl font-bold flex flex-wrap items-center gap-2">
+              <User className="h-5 w-5 text-primary hidden sm:block" />
+              {appointment.clientName}
+              {hasCharge && (
+                <Badge
+                  variant="destructive"
+                  className="text-[10px] animate-pulse py-0 h-5"
+                >
+                  Pendente
+                </Badge>
+              )}
+            </DialogTitle>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-muted-foreground font-medium text-xs sm:text-sm">
                 {appointment.service}
-                {appointment.isRecurring && (
-                  <Badge
-                    variant="secondary"
-                    className="bg-primary/10 text-primary border-primary/20 flex items-center gap-1 h-5 text-[10px]"
-                  >
-                    <Repeat className="h-3 w-3" /> Pacote
-                  </Badge>
-                )}
-              </p>
+              </span>
+              {appointment.isRecurring && (
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-primary/20 flex items-center gap-1 h-5 text-[9px] sm:text-[10px] py-0"
+                >
+                  <Repeat className="h-2.5 w-2.5 sm:h-3 sm:w-3" /> Pacote
+                </Badge>
+              )}
             </div>
-
-            {/* Botão de Editar Rápido */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-primary"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5 py-2 overflow-y-auto max-h-[60vh] pr-2 [&::-webkit-scrollbar]:hidden">
-          {/* Card de Tempo (Agora mostrando Início e Fim) */}
-          <div className="bg-muted/30 border border-border/50 rounded-xl p-3 flex flex-col gap-2">
+        {/* MÁGICA DA RESPONSIVIDADE: min-h-0 permite que o flex encolha e não empurre o rodapé pra fora */}
+        <div className="flex flex-col gap-4 py-2 overflow-y-auto px-1 -mx-1 [&::-webkit-scrollbar]:hidden min-h-0">
+          <div className="bg-muted/30 border border-border/50 rounded-xl p-3 flex flex-col gap-2.5">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-2 text-sm text-foreground">
                 <CalendarDays className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium">Hoje</span>
               </div>
-              <Badge variant="outline" className="font-bold bg-background">
+              <Badge
+                variant="outline"
+                className="font-bold bg-background text-[10px] sm:text-xs"
+              >
                 {appointment.sessionInfo}
               </Badge>
             </div>
-            <div className="flex items-center gap-2 text-sm text-foreground">
-              <Clock className="h-4 w-4 text-muted-foreground" />
+            <div className="flex flex-wrap items-center gap-2 text-sm text-foreground">
+              <Clock className="h-4 w-4 text-muted-foreground shrink-0" />
               <span className="font-medium">
                 {appointment.time} até{" "}
                 {calculateEndTime(appointment.time, appointment.duration)}
@@ -158,16 +148,15 @@ export function AppointmentDetailsModal({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Status do Agendamento */}
-            <div className="flex flex-col gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">
                 Status do Agendamento
               </Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger
                   className={cn(
-                    "h-9",
+                    "h-10 sm:h-9 text-sm",
                     status === "confirmado"
                       ? "border-emerald-500 bg-emerald-500/10 text-emerald-700 font-semibold"
                       : "",
@@ -181,20 +170,19 @@ export function AppointmentDetailsModal({
                   <SelectItem value="confirmado">Confirmado</SelectItem>
                   <SelectItem value="atrasou">Atrasou</SelectItem>
                   <SelectItem value="não_comparecimento">
-                    Não Comparecimento
+                    Não Comparec.
                   </SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Forma de Pagamento */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1.5">
               <Label className="text-xs text-muted-foreground">
                 Forma de Pagamento
               </Label>
               <Select value={payment} onValueChange={setPayment}>
-                <SelectTrigger className="h-9">
+                <SelectTrigger className="h-10 sm:h-9 text-sm">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -213,68 +201,69 @@ export function AppointmentDetailsModal({
             </div>
           </div>
 
-          {/* Observações */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             <Label className="text-xs text-muted-foreground">Observações</Label>
             <Textarea
-              placeholder="Ex: Cliente tem alergia a óleo de amêndoas..."
-              className="resize-none min-h-20 bg-muted/20"
+              placeholder="Ex: Alergia a óleo de amêndoas..."
+              className="resize-none min-h-15 sm:min-h-20 bg-muted/20 text-sm"
               value={obs}
               onChange={(e) => setObs(e.target.value)}
             />
           </div>
 
-          {/* Botões de Ação Dinâmicos */}
-          <div className="grid grid-cols-2 gap-3 mt-2">
+          <div className="flex flex-col sm:flex-row sm:grid sm:grid-cols-2 gap-2 sm:gap-3 mt-1">
             <Button
               variant={hasCharge ? "destructive" : "outline"}
               className={cn(
-                "w-full h-10",
+                "w-full h-10 sm:h-11",
                 !hasCharge &&
                   "border-dashed border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive",
               )}
               onClick={() => setHasCharge(!hasCharge)}
             >
-              <AlertCircle className="mr-2 h-4 w-4" />
-              {hasCharge ? "Remover Cobrança" : "Adicionar Cobrança"}
+              <AlertCircle className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">
+                {hasCharge ? "Remover Cobrança" : "Adicionar Cobrança"}
+              </span>
             </Button>
 
             <Button
               variant="secondary"
-              className="w-full h-10 bg-primary/10 text-primary hover:bg-primary/20"
+              className="w-full h-10 sm:h-11 bg-primary/10 text-primary hover:bg-primary/20"
             >
-              <ReceiptText className="mr-2 h-4 w-4" />
-              Gerar Recibo
+              <ReceiptText className="mr-2 h-4 w-4 shrink-0" />
+              <span className="truncate">Gerar Recibo</span>
             </Button>
           </div>
 
           <Button
-            className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm h-11 text-sm mt-2"
+            className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm h-12 text-sm sm:text-base mt-2 shrink-0"
             onClick={handleWhatsApp}
           >
-            <MessageCircle className="mr-2 h-4 w-4" />
+            <MessageCircle className="mr-2 h-5 w-5 shrink-0" />
             Confirmar via WhatsApp
           </Button>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2 pt-4 border-t border-border/50">
+        {/* Rodapé fixo - Usa flex-col-reverse para que o botão principal (Remarcar) fique em cima do Cancelar no celular */}
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 mt-2 pt-4 border-t border-border/50 shrink-0">
           <Button
             variant="ghost"
             className="text-destructive hover:text-destructive hover:bg-destructive/10 w-full sm:w-auto"
             onClick={() => onOpenChange(false)}
           >
-            <CalendarX2 className="mr-2 h-4 w-4" /> Cancelar Sessão
+            <CalendarX2 className="mr-2 h-4 w-4 shrink-0" /> Cancelar Sessão
           </Button>
 
           <Button
             variant="outline"
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto h-11 sm:h-10"
             onClick={() => {
               toast.info("Modo de edição/remarcação ativado.");
               onOpenChange(false);
             }}
           >
-            <CalendarClock className="mr-2 h-4 w-4" /> Remarcar
+            <CalendarClock className="mr-2 h-4 w-4 shrink-0" /> Remarcar
           </Button>
         </DialogFooter>
       </DialogContent>
