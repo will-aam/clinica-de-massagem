@@ -168,7 +168,7 @@ export function AdminSidebar() {
               </SidebarMenuItem>
 
               {/* Financeiro - Com Leque de Opções */}
-              <SidebarMenuItem>
+              {/* <SidebarMenuItem>
                 <Collapsible className="group/collapsible w-full">
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
@@ -199,7 +199,7 @@ export function AdminSidebar() {
                     </SidebarMenuSub>
                   </CollapsibleContent>
                 </Collapsible>
-              </SidebarMenuItem>
+              </SidebarMenuItem> */}
 
               {/* Financeiro - Com Leque de Opções (Aqui adicionamos o asChild) */}
               <Collapsible asChild className="group/collapsible">

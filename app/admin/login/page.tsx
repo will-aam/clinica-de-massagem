@@ -69,7 +69,7 @@ export default function AdminLoginPage() {
             <Heart className="h-8 w-8 text-primary-foreground" />
           </div>
           <CardTitle className="font-serif text-3xl text-card-foreground">
-            empresa
+            Totten
           </CardTitle>
           <CardDescription>Acesse o painel administrativo</CardDescription>
         </CardHeader>
