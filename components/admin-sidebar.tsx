@@ -18,6 +18,7 @@ import {
   ChevronRight,
   UserCog,
   Award,
+  Link2, // <-- Importamos o ícone novo aqui
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,12 +42,14 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 
+// Adicionamos o "Link na Bio" na lista principal
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/admin/clients", icon: Users },
   { title: "Serviços", href: "/admin/services", icon: UserCog },
-  { title: "Histórico", href: "/admin/history", icon: ClipboardList },
+  { title: "Histórico Check-in", href: "/admin/history", icon: ClipboardList },
   { title: "Vouchers", href: "/admin/vouchers", icon: Award },
+  { title: "Link na Bio", href: "/admin/link-bio", icon: Link2 }, // <-- NOVO ITEM
 ];
 
 // Sub-itens da Agenda baseados no seu mapeamento
@@ -134,8 +137,8 @@ export function AdminSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {/* Agenda - Com Leque de Opções */}
-              <SidebarMenuItem>
-                <Collapsible className="group/collapsible w-full">
+              <Collapsible asChild className="group/collapsible w-full">
+                <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
                       <div className="flex items-center justify-between w-full">
@@ -164,45 +167,11 @@ export function AdminSidebar() {
                       ))}
                     </SidebarMenuSub>
                   </CollapsibleContent>
-                </Collapsible>
-              </SidebarMenuItem>
+                </SidebarMenuItem>
+              </Collapsible>
 
               {/* Financeiro - Com Leque de Opções */}
-              {/* <SidebarMenuItem>
-                <Collapsible className="group/collapsible w-full">
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className="hover:bg-muted/50">
-                      <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2">
-                          <Wallet className="h-4 w-4" />
-                          <span>Financeiro</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1 group-data-[state=open]/collapsible:hidden">
-                            <Lock className="h-2 w-2" />
-                            Em breve
-                          </span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </div>
-                      </div>
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub className="border-l border-border ml-4 mt-1">
-                      {financeSubItems.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem}>
-                          <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
-                            <span className="text-xs">{subItem}</span>
-                          </SidebarMenuSubButton>
-                        </SidebarMenuSubItem>
-                      ))}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </Collapsible>
-              </SidebarMenuItem> */}
-
-              {/* Financeiro - Com Leque de Opções (Aqui adicionamos o asChild) */}
-              <Collapsible asChild className="group/collapsible">
+              <Collapsible asChild className="group/collapsible w-full">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
