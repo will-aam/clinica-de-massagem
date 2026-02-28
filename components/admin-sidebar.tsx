@@ -18,7 +18,7 @@ import {
   ChevronRight,
   UserCog,
   Award,
-  Link2, // <-- Importamos o ícone novo aqui
+  Link2,
 } from "lucide-react";
 import {
   Sidebar,
@@ -41,37 +41,36 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
-// Adicionamos o "Link na Bio" na lista principal
+// Itens fixos do menu principal
 const navItems = [
   { title: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
   { title: "Clientes", href: "/admin/clients", icon: Users },
   { title: "Serviços", href: "/admin/services", icon: UserCog },
   { title: "Histórico Check-in", href: "/admin/history", icon: ClipboardList },
   { title: "Vouchers", href: "/admin/vouchers", icon: Award },
-  { title: "Link na Bio", href: "/admin/link-bio", icon: Link2 }, // <-- NOVO ITEM
+  { title: "Link na Bio", href: "/admin/link-bio", icon: Link2 },
 ];
 
-// Sub-itens da Agenda baseados no seu mapeamento
+// Sub-itens da Agenda (Novo Agendamento removido pois já está na página)
 const agendaSubItems = [
-  "Calendário",
-  "Novo Agendamento",
-  "Agendamentos Recorrentes",
-  "Bloqueio de Horário",
-  "Lista de Espera",
-  "Confirmações e Lembretes",
-  "Fichas de Anamnese",
+  { title: "Calendário", href: "/admin/agenda", active: true },
+  { title: "Agendamentos Recorrentes", href: "#", active: false },
+  { title: "Bloqueio de Horário", href: "#", active: false },
+  { title: "Lista de Espera", href: "#", active: false },
+  { title: "Confirmações e Lembretes", href: "#", active: false },
+  { title: "Fichas de Anamnese", href: "#", active: false },
 ];
 
 const financeSubItems = [
-  "Dashboard Financeiro",
-  "Títulos a Receber",
-  "Meios de Pagamento",
-  "Gestão de Comissões",
-  "Pacotes e Planos",
-  "Despesas",
-  "Análises (Analytics)",
-  "Relatórios",
+  { title: "Dashboard Financeiro", active: false },
+  { title: "Títulos a Receber", active: false },
+  { title: "Meios de Pagamento", active: false },
+  { title: "Gestão de Comissões", active: false },
+  { title: "Pacotes e Planos", active: false },
+  { title: "Despesas", active: false },
+  { title: "Relatórios", active: false },
 ];
 
 export function AdminSidebar() {
@@ -95,19 +94,15 @@ export function AdminSidebar() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             <Bird className="h-5 w-5" />
           </div>
-          <div>
-            <h2 className="font-inter text-xl font-bold text-sidebar-foreground tracking-tight">
-              Totten
-            </h2>
-          </div>
+          <h2 className="font-inter text-xl font-bold text-sidebar-foreground tracking-tight">
+            Totten
+          </h2>
         </Link>
       </SidebarHeader>
 
-      <SidebarContent className="overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {" "}
-        {/* Menu Principal */}
+      <SidebarContent className="overflow-y-auto [&::-webkit-scrollbar]:hidden">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
             Menu Principal
           </SidebarGroupLabel>
           <SidebarGroupContent>
@@ -117,7 +112,7 @@ export function AdminSidebar() {
                   <SidebarMenuButton
                     asChild
                     isActive={pathname.startsWith(item.href)}
-                    className="hover:bg-muted/50 transition-colors"
+                    className="hover:bg-muted/50"
                   >
                     <Link href={item.href} onClick={() => setOpenMobile(false)}>
                       <item.icon className="h-4 w-4" />
@@ -129,15 +124,19 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        {/* Módulos Adicionais (Agenda e Financeiro com Dropdown) */}
+
         <SidebarGroup className="mt-4">
-          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
             Módulos Extras
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {/* Agenda - Com Leque de Opções */}
-              <Collapsible asChild className="group/collapsible w-full">
+              {/* Agenda */}
+              <Collapsible
+                asChild
+                defaultOpen={pathname.startsWith("/admin/agenda")}
+                className="group/collapsible w-full"
+              >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
@@ -146,22 +145,35 @@ export function AdminSidebar() {
                           <CalendarDays className="h-4 w-4" />
                           <span>Agenda</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1 group-data-[state=open]/collapsible:hidden">
-                            <Lock className="h-2 w-2" />
-                            Em breve
-                          </span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </div>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform group-data-[state=open]/collapsible:rotate-90" />
                       </div>
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub className="border-l border-border ml-4 mt-1">
                       {agendaSubItems.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem}>
-                          <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
-                            <span className="text-xs">{subItem}</span>
+                        <SidebarMenuSubItem key={subItem.title}>
+                          <SidebarMenuSubButton
+                            asChild={subItem.active}
+                            className={cn(
+                              "py-2",
+                              !subItem.active &&
+                                "opacity-50 cursor-not-allowed",
+                            )}
+                          >
+                            {subItem.active ? (
+                              <Link
+                                href={subItem.href}
+                                onClick={() => setOpenMobile(false)}
+                              >
+                                <span className="text-xs">{subItem.title}</span>
+                              </Link>
+                            ) : (
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-xs">{subItem.title}</span>
+                                <Lock className="h-2.5 w-2.5 opacity-50" />
+                              </div>
+                            )}
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -170,7 +182,7 @@ export function AdminSidebar() {
                 </SidebarMenuItem>
               </Collapsible>
 
-              {/* Financeiro - Com Leque de Opções */}
+              {/* Financeiro */}
               <Collapsible asChild className="group/collapsible w-full">
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
@@ -180,22 +192,19 @@ export function AdminSidebar() {
                           <Wallet className="h-4 w-4" />
                           <span>Financeiro</span>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[9px] uppercase font-bold bg-muted border border-border/50 px-1.5 py-0.5 rounded text-muted-foreground flex items-center gap-1 group-data-[state=open]/collapsible:hidden">
-                            <Lock className="h-2 w-2" />
-                            Em breve
-                          </span>
-                          <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                        </div>
+                        <ChevronRight className="h-3 w-3 text-muted-foreground/50 transition-transform group-data-[state=open]/collapsible:rotate-90" />
                       </div>
                     </SidebarMenuButton>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <SidebarMenuSub className="border-l border-border ml-4 mt-1">
                       {financeSubItems.map((subItem) => (
-                        <SidebarMenuSubItem key={subItem}>
+                        <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
-                            <span className="text-xs">{subItem}</span>
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-xs">{subItem.title}</span>
+                              <Lock className="h-2.5 w-2.5 opacity-50" />
+                            </div>
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
@@ -215,7 +224,7 @@ export function AdminSidebar() {
               <User className="h-4 w-4" strokeWidth={2.5} />
             </div>
             <div className="flex flex-col">
-              <span className="text-sm font-medium text-sidebar-foreground leading-none mb-1">
+              <span className="text-sm font-medium leading-none mb-1">
                 Administrador
               </span>
               <span className="text-[10px] text-muted-foreground leading-none">
@@ -223,37 +232,25 @@ export function AdminSidebar() {
               </span>
             </div>
           </div>
-          <button className="relative p-2 text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-full transition-all active:scale-95">
+          <button className="relative p-2 text-muted-foreground hover:bg-muted rounded-full transition-all">
             <Bell className="h-4 w-4" />
             <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-primary ring-2 ring-background" />
           </button>
         </div>
-
         <div className="h-px bg-border/50 w-full" />
-
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="hover:bg-primary/10 hover:text-primary transition-colors"
-            >
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => setOpenMobile(false)}
-              >
+            <SidebarMenuButton asChild className="hover:text-primary">
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer">
                 <Headset className="h-4 w-4" />
                 <span>Suporte</span>
               </a>
             </SidebarMenuButton>
           </SidebarMenuItem>
-
           <SidebarMenuItem className="mt-1">
             <SidebarMenuButton
               asChild
               isActive={pathname.startsWith("/admin/settings")}
-              className="hover:bg-muted/50 transition-colors"
             >
               <Link href="/admin/settings" onClick={() => setOpenMobile(false)}>
                 <Settings className="h-4 w-4" />
@@ -261,11 +258,10 @@ export function AdminSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-
           <SidebarMenuItem className="mt-1">
             <SidebarMenuButton
               asChild
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
             >
               <Link href="/admin/login">
                 <LogOut className="h-4 w-4" />
