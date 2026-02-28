@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Repeat, Clock } from "lucide-react";
+import { MessageCircle, Repeat, Clock, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -26,6 +26,7 @@ export interface Appointment {
   isRecurring: boolean;
   phone: string;
   color: string;
+  hasCharge?: boolean; // Novo campo de cobrança!
 }
 
 interface DailyAgendaGridProps {
@@ -47,6 +48,14 @@ export function DailyAgendaGrid({
     const height = (durationMinutes / 60) * HOUR_HEIGHT;
 
     return { top, height };
+  };
+
+  // Calcula hora de término para exibir no card
+  const calculateEndTime = (start: string, duration: number) => {
+    const [h, m] = start.split(":").map(Number);
+    const date = new Date();
+    date.setHours(h, m + duration);
+    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
   };
 
   // Botão rápido do WhatsApp direto no card
@@ -108,8 +117,11 @@ export function DailyAgendaGrid({
                     key={appt.id}
                     onClick={() => onAppointmentClick(appt)} // Abre o Modal de Detalhes
                     className={cn(
-                      "absolute left-2 right-4 ml-1 md:ml-4 rounded-xl border p-3 flex flex-col shadow-sm transition-transform hover:scale-[1.01] hover:shadow-md cursor-pointer group overflow-hidden",
+                      "absolute left-2 right-4 ml-1 md:ml-4 rounded-xl border p-3 flex flex-col shadow-sm transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group overflow-hidden",
                       appt.color,
+                      // Se tem cobrança, adiciona a borda vermelha e um glow suave
+                      appt.hasCharge &&
+                        "border-2 border-destructive shadow-[0_0_10px_rgba(239,68,68,0.3)] ring-1 ring-destructive/50",
                     )}
                     style={{
                       top: `${top}px`,
@@ -123,13 +135,25 @@ export function DailyAgendaGrid({
                           <span className="font-bold text-sm md:text-base leading-none truncate">
                             {appt.clientName}
                           </span>
-                          {appt.isRecurring && (
-                            <span title="Agendamento Recorrente">
-                              <Repeat className="h-3 w-3 opacity-60" />
-                            </span>
-                          )}
+
+                          {/* Ícones de Alerta / Recorrência */}
+                          <div className="flex items-center gap-1">
+                            {appt.isRecurring && (
+                              <span title="Agendamento Recorrente">
+                                <Repeat className="h-3 w-3 opacity-60" />
+                              </span>
+                            )}
+                            {appt.hasCharge && (
+                              <span
+                                title="Cobrança Pendente"
+                                className="text-destructive animate-pulse"
+                              >
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <span className="text-xs font-medium opacity-80 mt-1 truncate">
+                        <span className="text-xs font-medium opacity-80 mt-1.5 truncate">
                           {appt.service}
                         </span>
                       </div>
@@ -146,10 +170,12 @@ export function DailyAgendaGrid({
                       </Button>
                     </div>
 
+                    {/* Rodapé: Agora mostra Início e Fim */}
                     <div className="mt-auto flex items-center gap-3 text-xs font-medium opacity-70 pt-2 border-t border-black/5">
                       <span className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        {appt.time}
+                        {appt.time} -{" "}
+                        {calculateEndTime(appt.time, appt.duration)}
                       </span>
                       <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-white/30 text-[10px] uppercase font-bold tracking-wider">
                         {appt.sessionInfo}

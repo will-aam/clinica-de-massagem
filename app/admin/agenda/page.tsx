@@ -30,6 +30,7 @@ const MOCK_APPOINTMENTS: Appointment[] = [
     isRecurring: true,
     phone: "5579999999999",
     color: "bg-emerald-100 border-emerald-300 text-emerald-900",
+    hasCharge: true, // <-- ADICIONADO AQUI PARA TESTARMOS O ALARME VERMELHO!
   },
   {
     id: "2",
