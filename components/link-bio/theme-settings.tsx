@@ -8,31 +8,60 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Palette, Check } from "lucide-react";
+import { Palette, Check, Type } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+// Adicionamos as cores padrões ideais para cada tema!
 const SYSTEM_THEMES = [
-  { id: "solid", name: "Cor Sólida", css: "bg-slate-200" },
+  {
+    id: "solid",
+    name: "Cor Sólida",
+    css: "bg-slate-200",
+    txt: "#0f172a",
+    btnBg: "#ffffff",
+    btnTxt: "#0f172a",
+  },
   {
     id: "ocean",
     name: "Oceano",
     css: "bg-gradient-to-br from-cyan-400 to-blue-500",
+    txt: "#ffffff",
+    btnBg: "#ffffff",
+    btnTxt: "#0284c7",
   },
   {
     id: "sunset",
     name: "Pôr do Sol",
     css: "bg-gradient-to-br from-orange-400 to-rose-400",
+    txt: "#ffffff",
+    btnBg: "#ffffff",
+    btnTxt: "#e11d48",
   },
   {
     id: "dark",
     name: "Elegância",
     css: "bg-gradient-to-br from-slate-900 via-slate-800 to-black",
+    txt: "#ffffff",
+    btnBg: "#1e293b",
+    btnTxt: "#ffffff",
   },
 ];
 
 const SOLID_COLORS = ["#000000", "#FFFFFF", "#2563EB", "#DB2777", "#16A34A"];
 
 export function ThemeSettings({ data, onChange }: any) {
+  // Quando troca o tema, já puxa as cores ideais pra ele não ficar cego
+  const handleThemeChange = (theme: (typeof SYSTEM_THEMES)[0]) => {
+    onChange({
+      ...data,
+      id: theme.id,
+      css: theme.css,
+      textColor: theme.txt,
+      buttonBg: theme.btnBg,
+      buttonText: theme.btnTxt,
+    });
+  };
+
   return (
     <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
       <CardHeader className="px-0 pt-0 md:pt-6 md:px-6 pb-4">
@@ -40,9 +69,13 @@ export function ThemeSettings({ data, onChange }: any) {
           <Palette className="h-5 w-5 text-primary" />
           Aparência e Temas
         </CardTitle>
-        <CardDescription>Escolha um fundo para a sua página.</CardDescription>
+        <CardDescription>
+          Escolha um fundo para a sua página e personalize as cores.
+        </CardDescription>
       </CardHeader>
+
       <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-6">
+        {/* TEMAS DO SISTEMA */}
         <div className="flex flex-col gap-3">
           <Label className="text-foreground font-medium">
             Temas do Sistema
@@ -51,9 +84,7 @@ export function ThemeSettings({ data, onChange }: any) {
             {SYSTEM_THEMES.map((theme) => (
               <button
                 key={theme.id}
-                onClick={() =>
-                  onChange({ ...data, id: theme.id, css: theme.css })
-                }
+                onClick={() => handleThemeChange(theme)}
                 className={cn(
                   "relative flex flex-col items-center gap-2 rounded-xl border-2 p-2 transition-all outline-none",
                   data.id === theme.id
@@ -89,11 +120,11 @@ export function ThemeSettings({ data, onChange }: any) {
             ))}
           </div>
         </div>
+
+        {/* COR DO FUNDO SÓLIDO (Só aparece se o tema for Sólido) */}
         {data.id === "solid" && (
           <div className="flex flex-col gap-3 pt-4 border-t border-border/50 animate-in fade-in slide-in-from-top-2">
-            <Label className="text-foreground font-medium">
-              Personalize sua Cor
-            </Label>
+            <Label className="text-foreground font-medium">Cor do Fundo</Label>
             <div className="flex flex-wrap items-center gap-3">
               {SOLID_COLORS.map((color) => (
                 <button
@@ -130,6 +161,115 @@ export function ThemeSettings({ data, onChange }: any) {
             </div>
           </div>
         )}
+
+        {/* TIPOGRAFIA E CORES AVANÇADAS */}
+        <div className="flex flex-col gap-5 pt-4 border-t border-border/50">
+          <div className="flex flex-col gap-3">
+            <Label className="text-foreground font-medium flex items-center gap-2">
+              <Type className="h-4 w-4" /> Fonte do Texto
+            </Label>
+            <div className="flex bg-muted p-1 rounded-lg border border-border/50">
+              <button
+                onClick={() => onChange({ ...data, font: "font-sans" })}
+                className={cn(
+                  "flex-1 text-sm py-2 rounded-md transition-colors",
+                  data.font === "font-sans"
+                    ? "bg-background shadow-sm font-semibold"
+                    : "hover:bg-background/50",
+                )}
+              >
+                Padrão
+              </button>
+              <button
+                onClick={() => onChange({ ...data, font: "font-serif" })}
+                className={cn(
+                  "flex-1 text-sm py-2 rounded-md font-serif transition-colors",
+                  data.font === "font-serif"
+                    ? "bg-background shadow-sm font-semibold"
+                    : "hover:bg-background/50",
+                )}
+              >
+                Clássica
+              </button>
+              <button
+                onClick={() => onChange({ ...data, font: "font-mono" })}
+                className={cn(
+                  "flex-1 text-sm py-2 rounded-md font-mono transition-colors",
+                  data.font === "font-mono"
+                    ? "bg-background shadow-sm font-semibold"
+                    : "hover:bg-background/50",
+                )}
+              >
+                Moderna
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-6">
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">
+                Cor do Texto
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="relative h-8 w-8 rounded-full overflow-hidden border border-border/50 shadow-sm cursor-pointer">
+                  <input
+                    type="color"
+                    value={data.textColor}
+                    onChange={(e) =>
+                      onChange({ ...data, textColor: e.target.value })
+                    }
+                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs uppercase font-mono text-muted-foreground">
+                  {data.textColor}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">
+                Fundo do Botão
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="relative h-8 w-8 rounded-full overflow-hidden border border-border/50 shadow-sm cursor-pointer">
+                  <input
+                    type="color"
+                    value={data.buttonBg}
+                    onChange={(e) =>
+                      onChange({ ...data, buttonBg: e.target.value })
+                    }
+                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs uppercase font-mono text-muted-foreground">
+                  {data.buttonBg}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label className="text-xs text-muted-foreground">
+                Texto do Botão
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="relative h-8 w-8 rounded-full overflow-hidden border border-border/50 shadow-sm cursor-pointer">
+                  <input
+                    type="color"
+                    value={data.buttonText}
+                    onChange={(e) =>
+                      onChange({ ...data, buttonText: e.target.value })
+                    }
+                    className="absolute -top-2 -left-2 h-12 w-12 cursor-pointer"
+                  />
+                </div>
+                <span className="text-xs uppercase font-mono text-muted-foreground">
+                  {data.buttonText}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

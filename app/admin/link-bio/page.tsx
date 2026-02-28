@@ -40,6 +40,10 @@ export default function LinkBioPage() {
     id: "solid",
     color: "#FAF9F6",
     css: "",
+    font: "font-sans",
+    textColor: "#0f172a", // Cor do texto e dos ícones
+    buttonBg: "#ffffff", // Cor do fundo do botão
+    buttonText: "#0f172a", // Cor da letra do botão
   });
   const [socials, setSocials] = useState({
     activePlatforms: ["whatsapp", "instagram"],
@@ -106,35 +110,54 @@ export default function LinkBioPage() {
   const PhoneMockup = () => (
     <div className="w-[320px] h-162.5 bg-black rounded-[3rem] border-8 border-black shadow-2xl relative overflow-hidden ring-1 ring-border/20 mx-auto">
       <div className="absolute top-0 inset-x-0 h-6 bg-black z-20 rounded-b-2xl w-40 mx-auto" />
+
       <div
         className={cn(
           "w-full h-full flex flex-col items-center pt-16 px-6 relative z-10 transition-colors duration-500",
           theme.id !== "solid" ? theme.css : "",
+          theme.font,
         )}
         style={theme.id === "solid" ? { backgroundColor: theme.color } : {}}
       >
         <div className="h-20 w-20 rounded-full bg-black/10 border-2 border-white/30 shadow-sm mb-4" />
-        <h2 className="font-bold text-slate-900 text-xl text-center">
+
+        {/* Textos aplicam a cor escolhida e a fonte */}
+        <h2
+          className="font-bold text-xl text-center"
+          style={{ color: theme.textColor }}
+        >
           {profile.name || "Seu Nome"}
         </h2>
-        <p className="text-center text-sm text-slate-800 mt-2 leading-relaxed font-medium">
+        <p
+          className="text-center text-sm mt-2 leading-relaxed font-medium"
+          style={{ color: theme.textColor }}
+        >
           {profile.bio || "Sua biografia aparecerá aqui..."}
         </p>
+
+        {/* Ícones elegantes (vazados, combinando com a cor do texto) */}
         <div className="flex flex-wrap justify-center gap-3 mt-6">
           {socials.activePlatforms.map((platform) => (
             <div
               key={platform}
-              className="h-11 w-11 rounded-full bg-slate-900 text-white flex items-center justify-center shadow-sm"
+              className="h-11 w-11 rounded-full flex items-center justify-center shadow-sm border hover:scale-110 transition-transform cursor-pointer"
+              style={{ borderColor: theme.textColor, color: theme.textColor }}
             >
-              <>{renderSocialIcon(platform)}</>
+              {renderSocialIcon(platform)}
             </div>
           ))}
         </div>
+
+        {/* Botões lendo as cores novas */}
         <div className="w-full mt-6 flex flex-col gap-3">
           {links.map((link) => (
             <div
               key={link.id}
-              className="w-full h-12 bg-white/60 backdrop-blur-md border border-white/60 rounded-full flex items-center justify-center text-slate-900 text-sm font-bold shadow-sm px-4 text-center truncate"
+              className="w-full h-12 rounded-full flex items-center justify-center text-sm font-bold shadow-sm px-4 text-center truncate cursor-pointer hover:opacity-90 transition-opacity"
+              style={{
+                backgroundColor: theme.buttonBg,
+                color: theme.buttonText,
+              }}
             >
               {link.title || "Novo Botão"}
             </div>
@@ -143,7 +166,6 @@ export default function LinkBioPage() {
       </div>
     </div>
   );
-
   return (
     <>
       <AdminHeader title="Link na Bio" />
