@@ -37,11 +37,21 @@ export function PackageVoucher({
     setIsExporting(true);
 
     try {
-      // Gera a imagem em alta qualidade
+      // Pega as dimensões exatas do elemento na tela para evitar cortes
+      const width = cardRef.current.offsetWidth;
+      const height = cardRef.current.offsetHeight;
+
+      // Gera a imagem forçando a largura e altura, e removendo distorções de margem
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
-        pixelRatio: 3, // Aumentei para 3 para ficar EXTREMAMENTE nítido ao exportar
+        pixelRatio: 3,
         backgroundColor: "#ffffff",
+        width: width,
+        height: height,
+        style: {
+          margin: "0",
+          transform: "none",
+        },
       });
 
       if (action === "download") {
@@ -79,7 +89,7 @@ export function PackageVoucher({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] sm:max-w-90 bg-background p-4 sm:p-6 rounded-3xl overflow-y-auto max-h-[90dvh]">
+      <DialogContent className="w-[95vw] sm:max-w-md bg-background p-4 sm:p-6 rounded-3xl overflow-y-auto max-h-[90dvh]">
         <DialogHeader className="text-center sm:text-left">
           <DialogTitle>Comprovante de Conclusão</DialogTitle>
           <DialogDescription>
@@ -87,11 +97,12 @@ export function PackageVoucher({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col items-center justify-center py-2 sm:py-4 w-full">
-          {/* O CARD FOI TRAVADO EM 280px para ficar elegante e pequeno no Desktop */}
+        {/* O container PAI assume o controle total do alinhamento */}
+        <div className="flex flex-col items-center justify-center py-2 sm:py-4 w-full overflow-hidden">
+          {/* O CARD foi travado com w-[280px] e o mx-auto foi removido para não bugar o html-to-image */}
           <div
             ref={cardRef}
-            className="w-70 bg-[#FAF9F6] border-2 border-[#D9C6BF] p-5 rounded-2xl flex flex-col items-center text-center shadow-sm relative overflow-hidden mx-auto"
+            className="w-70 bg-[#FAF9F6] border-2 border-[#D9C6BF] p-5 rounded-2xl flex flex-col items-center text-center shadow-sm relative overflow-hidden shrink-0"
           >
             {/* Elemento decorativo de fundo */}
             <div className="absolute -top-10 -right-10 text-[#D9C6BF]/20 pointer-events-none">
