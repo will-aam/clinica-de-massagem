@@ -225,7 +225,7 @@ export default function AdminDashboardPage() {
               Check-ins Recentes
             </CardTitle>
             <CardDescription>
-              Os últimos registros de presença no totem
+              Os últimos registros de presença no totten
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6">

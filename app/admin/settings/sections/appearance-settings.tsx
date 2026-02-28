@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Palette, Sparkles, MessageCircle } from "lucide-react";
+import { Palette, MessageCircle, PaintbrushVertical } from "lucide-react";
 
 export function AppearanceSettings() {
   const { theme, setTheme } = useTheme();
@@ -75,7 +75,7 @@ export function AppearanceSettings() {
 
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-primary text-lg">
-            <Sparkles className="h-5 w-5" />
+            <PaintbrushVertical className="h-5 w-5" />
             Deixe o Totten com a cara da sua empresa!
           </CardTitle>
           <CardDescription className="text-foreground/80">
@@ -92,8 +92,8 @@ export function AppearanceSettings() {
               </span>
             </p> */}
             <p className="text-xs text-muted-foreground mt-1 max-w-100">
-              Nossa equipe extrai a paleta de cores da sua marca e aplica nos
-              botões, menus e no Totem de autoatendimento.
+              Nossa equipe extrai a paleta de cores da sua logomarca e aplica
+              nos botões, menus e no Totten de autoatendimento.
             </p>
           </div>
           <Button

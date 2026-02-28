@@ -27,7 +27,7 @@ export function NotificationsSettings() {
           </CardTitle>
           <CardDescription>
             Escolha como você quer ser avisada quando houver atividades no
-            Totem.
+            Totten.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-6">
