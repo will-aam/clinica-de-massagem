@@ -1,4 +1,3 @@
-// app/admin/settings/sections/message-settings.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,62 +18,147 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { MessageSquare, HelpCircle, Save } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { MessageSquare, HelpCircle, Save, Loader2, Check } from "lucide-react";
+import { toast } from "sonner";
 
 export function MessageSettings() {
-  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [phoneSaved, setPhoneSaved] = useState(false); // 🔥 Indicador visual
   const [phone, setPhone] = useState("");
   const [showTip, setShowTip] = useState(false);
 
   // Estados para os diferentes templates
-  const [msgUpdate, setMsgUpdate] = useState(
-    "Olá, {nome}! Tudo bem? 💆‍♀️✨\n\nPassando para avisar que seu check-in foi registrado. Você já realizou {usadas} de {total} sessões do seu pacote.",
-  );
-  const [msgWelcome, setMsgWelcome] = useState(
-    "Olá, {nome}! Que alegria ter você aqui na nossa empresa. 🥰\n\nSeu pacote de {total} sessões já está ativo no nosso sistema. Qualquer dúvida, é só chamar!",
-  );
-  const [msgRenewal, setMsgRenewal] = useState(
-    "Parabéns, {nome}! 🎉 Você concluiu hoje a última sessão do seu pacote.\n\nComo o seu bem-estar é nossa prioridade, que tal já deixarmos o seu próximo pacote garantido? Responda SIM para vermos os horários!",
-  );
-  const [msgReminder, setMsgReminder] = useState(
-    "Oi, {nome}! Passando para lembrar do nosso horário agendado para amanhã às {horario}. \n\nPodemos confirmar sua presença? 👍",
-  );
+  const [msgUpdate, setMsgUpdate] = useState("");
+  const [msgWelcome, setMsgWelcome] = useState("");
+  const [msgRenewal, setMsgRenewal] = useState("");
+  const [msgReminder, setMsgReminder] = useState("");
 
-  // Carrega as configurações salvas (se existirem)
+  // 🔥 Busca dados do banco quando carrega
   useEffect(() => {
-    const savedTemplates = localStorage.getItem("whatsapp_templates");
-    if (savedTemplates) {
+    const fetchMessages = async () => {
       try {
-        const parsed = JSON.parse(savedTemplates);
-        if (parsed.phone) setPhone(parsed.phone);
-        if (parsed.msgUpdate) setMsgUpdate(parsed.msgUpdate);
-        if (parsed.msgWelcome) setMsgWelcome(parsed.msgWelcome);
-        if (parsed.msgRenewal) setMsgRenewal(parsed.msgRenewal);
-        if (parsed.msgReminder) setMsgReminder(parsed.msgReminder);
-      } catch (e) {
-        console.error("Erro ao carregar templates", e);
+        const res = await fetch("/api/settings/messages");
+        if (res.ok) {
+          const data = await res.json();
+          setPhone(data.phone || "");
+          setMsgUpdate(
+            data.msgUpdate ||
+              "Olá, {nome}! Tudo bem? 💆‍♀️✨\n\nPassando para avisar que seu check-in foi registrado. Você já realizou {usadas} de {total} sessões do seu pacote.",
+          );
+          setMsgWelcome(
+            data.msgWelcome ||
+              "Olá, {nome}! Que alegria ter você aqui na nossa empresa. 🥰\n\nSeu pacote de {total} sessões já está ativo no nosso sistema. Qualquer dúvida, é só chamar!",
+          );
+          setMsgRenewal(
+            data.msgRenewal ||
+              "Parabéns, {nome}! 🎉 Você concluiu hoje a última sessão do seu pacote.\n\nComo o seu bem-estar é nossa prioridade, que tal já deixarmos o seu próximo pacote garantido? Responda SIM para vermos os horários!",
+          );
+          setMsgReminder(
+            data.msgReminder ||
+              "Oi, {nome}! Passando para lembrar do nosso horário agendado para amanhã às {horario}. \n\nPodemos confirmar sua presença? 👍",
+          );
+        } else {
+          toast.error("Erro ao carregar mensagens");
+        }
+      } catch (error) {
+        console.error("Erro ao buscar mensagens:", error);
+        toast.error("Erro de conexão");
+      } finally {
+        setLoading(false);
       }
-    }
-  }, []);
-
-  // Salva no LocalStorage
-  const handleSave = () => {
-    const templatesToSave = {
-      phone,
-      msgUpdate,
-      msgWelcome,
-      msgRenewal,
-      msgReminder,
     };
 
-    localStorage.setItem("whatsapp_templates", JSON.stringify(templatesToSave));
+    fetchMessages();
+  }, []);
 
-    toast({
-      title: "Mensagens salvas!",
-      description: "Os modelos de WhatsApp foram atualizados com sucesso.",
-    });
+  // 🔥 SALVA APENAS O WHATSAPP quando pressionar ENTER
+  const handlePhoneSave = async () => {
+    if (!phone.trim()) {
+      toast.error("Digite um número de WhatsApp");
+      return;
+    }
+
+    setPhoneSaved(false);
+
+    try {
+      const res = await fetch("/api/settings/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          msgUpdate,
+          msgWelcome,
+          msgRenewal,
+          msgReminder,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setPhoneSaved(true);
+        toast.success("Número de WhatsApp salvo!");
+        setTimeout(() => setPhoneSaved(false), 2000);
+      } else {
+        toast.error(data.error || "Erro ao salvar");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar WhatsApp:", error);
+      toast.error("Erro de conexão");
+    }
   };
+
+  // 🔥 Detecta quando o usuário pressiona ENTER no campo de telefone
+  const handlePhoneKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handlePhoneSave();
+    }
+  };
+
+  // 🔥 Salva TUDO (WhatsApp + Templates)
+  const handleSaveAll = async () => {
+    setSaving(true);
+
+    try {
+      const res = await fetch("/api/settings/messages", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone,
+          msgUpdate,
+          msgWelcome,
+          msgRenewal,
+          msgReminder,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        toast.success("Mensagens salvas com sucesso!");
+      } else {
+        toast.error(data.error || "Erro ao salvar");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar:", error);
+      toast.error("Erro de conexão");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <Card className="border-0 bg-transparent shadow-none md:border md:bg-card md:shadow-sm">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -93,31 +177,59 @@ export function MessageSettings() {
             </div>
 
             {/* Botão de Salvar Global da Seção */}
-            <Button onClick={handleSave} className="shrink-0">
-              <Save className="h-4 w-4 mr-2" />
-              Salvar WhatsApp
+            <Button
+              onClick={handleSaveAll}
+              disabled={saving}
+              className="shrink-0"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Tudo
+                </>
+              )}
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="grid gap-6 px-0 pb-0 md:pb-6 md:px-6">
-          {/* Número de Contato */}
+          {/* 🔥 Número de WhatsApp com Enter para salvar */}
           <div className="grid gap-2 border-b pb-6">
             <Label htmlFor="phone" className="text-foreground font-medium">
               Seu Número de WhatsApp (Remetente)
             </Label>
             <div className="flex gap-2">
-              <Input
-                id="phone"
-                placeholder="Ex: 5511999999999"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="max-w-xs bg-muted"
-              />
+              <div className="relative flex-1 max-w-xs">
+                <Input
+                  id="phone"
+                  placeholder="Ex: 5511999999999"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setPhoneSaved(false);
+                  }}
+                  onKeyDown={handlePhoneKeyDown}
+                  className="bg-muted pr-10"
+                />
+                {phoneSaved && (
+                  <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500 animate-in fade-in zoom-in" />
+                )}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Deixe em branco se for usar o número do aparelho que está logado.
-              Coloque o código do país (ex: 55).
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
+              <HelpCircle className="h-3.5 w-3.5 text-primary" />
+              <span>
+                Pressione{" "}
+                <kbd className="px-1.5 py-0.5 bg-muted border rounded text-[10px]">
+                  Enter
+                </kbd>{" "}
+                após digitar para salvar rapidamente.
+              </span>
             </p>
           </div>
 
