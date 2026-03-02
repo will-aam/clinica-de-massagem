@@ -82,7 +82,7 @@ export default function AdminLoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@clinica.com"
+                placeholder="admin@empresa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -119,10 +119,16 @@ export default function AdminLoginPage() {
               {loading ? "Entrando..." : "Entrar"}
             </Button>
 
-            {/* Apenas para facilitar durante o desenvolvimento, depois removemos */}
-            <p className="text-center text-xs text-muted-foreground mt-2">
-              {"Use admin@clinica.com / 123456"}
-            </p>
+            {/* Link para a página de Registro */}
+            <div className="mt-4 text-center text-sm text-muted-foreground">
+              Ainda não tem uma conta?{" "}
+              <Link
+                href="/register"
+                className="font-medium text-primary hover:underline"
+              >
+                Crie uma conta
+              </Link>
+            </div>
           </form>
         </CardContent>
       </Card>
