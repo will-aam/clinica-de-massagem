@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SessionProvider } from "@/components/session-provider"; // 🔥 LINHA NOVA 1
 import "./globals.css";
 
 const inter = Inter({
@@ -38,16 +39,21 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          {children}
-          <Toaster position="top-right" richColors />
-          <Analytics />
-        </ThemeProvider>
+        <SessionProvider>
+          {" "}
+          {/* 🔥 LINHA NOVA 2 */}
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+          >
+            {children}
+            <Toaster position="top-right" richColors />
+            <Analytics />
+          </ThemeProvider>
+        </SessionProvider>{" "}
+        {/* 🔥 FECHA AQUI */}
       </body>
     </html>
   );

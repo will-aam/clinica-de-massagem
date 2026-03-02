@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react"; // 🔥 MUDANÇA 1
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Heart, ArrowLeft } from "lucide-react";
@@ -28,18 +29,20 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      // 🔥 MUDANÇA 2: Troca o fetch() pelo signIn() do NextAuth
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false, // Não redireciona automaticamente
       });
 
-      const data = await res.json();
-
-      if (data.success) {
+      if (result?.error) {
+        // 🔥 MUDANÇA 3: Trata erro do NextAuth
+        setError("E-mail ou senha inválidos");
+      } else if (result?.ok) {
+        // 🔥 MUDANÇA 4: Sucesso! Redireciona
         router.push("/admin/dashboard");
-      } else {
-        setError(data.error || "Erro ao fazer login");
+        router.refresh(); // Força reload da sessão
       }
     } catch {
       setError("Erro de conexão. Tente novamente.");
@@ -123,7 +126,7 @@ export default function AdminLoginPage() {
             <div className="mt-4 text-center text-sm text-muted-foreground">
               Ainda não tem uma conta?{" "}
               <Link
-                href="/register"
+                href="/admin/register"
                 className="font-medium text-primary hover:underline"
               >
                 Crie uma conta
