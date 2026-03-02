@@ -150,7 +150,7 @@ function LoginForm() {
             <div className="mt-4 text-center text-sm text-muted-foreground">
               Ainda não tem uma conta?{" "}
               <Link
-                href="/admin/register"
+                href="/register"
                 className="font-medium text-primary hover:underline"
               >
                 Crie uma conta
