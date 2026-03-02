@@ -85,5 +85,5 @@ export async function registerAdmin(
   }
 
   // 🔥 REDIRECIONA PARA PÁGINA DE AVISO
-  redirect("/admin/check-email");
+  redirect("/check-email");
 }

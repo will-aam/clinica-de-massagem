@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -28,15 +28,18 @@ export default function AdminLoginPage() {
   const verified = searchParams.get("verified");
   const error = searchParams.get("error");
 
-  // Mostra toast quando a página carrega
-  useState(() => {
+  // 🔥 CORRIGIDO: useEffect ao invés de useState
+  useEffect(() => {
     if (verified === "true") {
       toast.success("E-mail verificado! Você já pode fazer login.");
     }
     if (error === "invalid_token") {
       toast.error("Link de verificação inválido ou expirado.");
     }
-  });
+    if (error === "session_required") {
+      toast.warning("Faça login para usar o totem de check-in.");
+    }
+  }, [verified, error]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,7 +153,7 @@ export default function AdminLoginPage() {
             <div className="mt-4 text-center text-sm text-muted-foreground">
               Ainda não tem uma conta?{" "}
               <Link
-                href="/admin/register"
+                href="/register"
                 className="font-medium text-primary hover:underline"
               >
                 Crie uma conta

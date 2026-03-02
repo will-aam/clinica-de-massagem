@@ -26,6 +26,12 @@ export default function TotemCheckInPage() {
 
       const data = await res.json();
 
+      // 🔥 SE NÃO HÁ SESSÃO DE ADMIN, REDIRECIONA PARA LOGIN
+      if (res.status === 401) {
+        router.push("/admin/login?error=session_required");
+        return;
+      }
+
       if (data.success) {
         const params = new URLSearchParams({
           name: data.client.name,
@@ -45,10 +51,9 @@ export default function TotemCheckInPage() {
   };
 
   return (
-    // Container principal: ocupa a tela toda e centraliza o conteúdo
     <div className="flex min-h-dvh w-full items-center justify-center bg-background p-4 sm:p-6 md:p-8">
       <div className="relative flex w-full max-w-lg flex-col items-center gap-8 rounded-3xl bg-card p-6 shadow-xl border border-border sm:p-10 md:p-12">
-        {/* Botão Voltar - Posicionado de forma absoluta dentro do card */}
+        {/* Botão Voltar */}
         <div className="absolute top-6 left-6 sm:top-8 sm:left-8">
           <Link
             href="/totem/idle"
@@ -71,7 +76,7 @@ export default function TotemCheckInPage() {
           </p>
         </div>
 
-        {/* O teclado numérico em si */}
+        {/* O teclado numérico */}
         <div className="w-full max-w-sm">
           <CpfKeypad
             value={cpf}

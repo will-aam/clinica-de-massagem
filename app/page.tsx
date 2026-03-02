@@ -1,5 +1,6 @@
-import { redirect } from "next/navigation"
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  redirect("/totem/idle")
+  // 🔥 Redireciona DIRETAMENTE para o totem (sem precisar de auth)
+  redirect("/totem/idle");
 }
