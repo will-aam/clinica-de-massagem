@@ -1,13 +1,19 @@
-// components/client/client-form.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Collapsible,
   CollapsibleContent,
@@ -24,10 +30,11 @@ import {
   CalendarDays,
   MapPin,
   ChevronDown,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 
-// Máscaras (Exportadas para uso local)
+// Máscaras
 function formatCpfInput(value: string): string {
   const d = value.replace(/\D/g, "").slice(0, 11);
   if (d.length <= 3) return d;
@@ -49,33 +56,90 @@ function formatCepInput(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+// Tipo do serviço
+type Service = {
+  id: string;
+  name: string;
+  description: string | null;
+  duration: number;
+  price: number;
+  category: { name: string };
+};
+
 export function ClientForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingServices, setLoadingServices] = useState(true);
   const [showMore, setShowMore] = useState(false);
+  const [services, setServices] = useState<Service[]>([]);
 
-  // O estado agora engloba os novos campos
   const [form, setForm] = useState({
     name: "",
     cpf: "",
     phone_whatsapp: "",
     email: "",
-    birth_date: "", // Novo
-    cep: "", // Novo
-    street: "", // Novo
-    number: "", // Novo
-    city: "", // Novo
-    state: "", // Novo
+    birth_date: "",
+    zip_code: "",
+    street: "",
+    number: "",
+    city: "",
+    // 🔥 Pacote (se vazio = não vincula)
+    service_id: "",
     total_sessions: "10",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Busca serviços ao carregar
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const res = await fetch("/api/services");
+        if (res.ok) {
+          const data = await res.json();
+          setServices(data);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar serviços:", error);
+      } finally {
+        setLoadingServices(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  // Calcula o preço do pacote automaticamente
+  const calculatePackagePrice = (): number => {
+    if (!form.service_id || !form.total_sessions) return 0;
+
+    const service = services.find((s) => s.id === form.service_id);
+    if (!service) return 0;
+
+    const sessions = Number(form.total_sessions);
+    const pricePerSession = Number(service.price);
+    const subtotal = sessions * pricePerSession;
+
+    // Aplica desconto baseado na quantidade
+    let discount = 0;
+    if (sessions >= 20) discount = 0.15;
+    else if (sessions >= 10) discount = 0.1;
+    else if (sessions >= 5) discount = 0.05;
+
+    return subtotal * (1 - discount);
+  };
+
   const validate = () => {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = "Nome é obrigatório";
 
-    // CPF totalmente OBRIGATÓRIO (exatamente 11 dígitos)
     if (form.cpf.replace(/\D/g, "").length !== 11) {
       errs.cpf = "CPF inválido ou incompleto";
     }
@@ -88,47 +152,89 @@ export function ClientForm() {
       errs.email = "Formato inválido";
     }
 
-    if (!form.total_sessions || Number(form.total_sessions) < 1) {
-      errs.total_sessions = "Mín. 1";
+    // 🔥 Valida pacote SE um serviço foi selecionado
+    if (form.service_id) {
+      if (!form.total_sessions || Number(form.total_sessions) < 1) {
+        errs.total_sessions = "Mín. 1 sessão";
+      }
     }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
 
     setLoading(true);
     try {
-      // Formata os dados para enviar para a API (Você precisará atualizar seu Prisma Schema depois)
-      const res = await fetch("/api/clients", {
+      // 1. Cria o cliente
+      const clientRes = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          total_sessions: Number(form.total_sessions),
+          name: form.name,
+          cpf: form.cpf,
+          phone_whatsapp: form.phone_whatsapp,
+          email: form.email || null,
+          birth_date: form.birth_date || null,
+          zip_code: form.zip_code || null,
+          city: form.city || null,
+          street: form.street || null,
+          number: form.number || null,
         }),
       });
 
-      if (res.ok) {
-        toast.success("Cliente cadastrado com sucesso!");
-        router.push("/admin/clients");
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Erro ao cadastrar cliente");
+      const clientData = await clientRes.json();
+
+      if (!clientRes.ok) {
+        toast.error(clientData.error || "Erro ao cadastrar cliente");
+        setLoading(false);
+        return;
       }
-    } catch {
+
+      // 2. 🔥 Se selecionou um serviço, cria o pacote
+      if (form.service_id) {
+        const packageRes = await fetch("/api/packages/templates", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            client_id: clientData.client.id,
+            service_id: form.service_id,
+            total_sessions: Number(form.total_sessions),
+            price: calculatePackagePrice(),
+          }),
+        });
+
+        if (!packageRes.ok) {
+          toast.error("Cliente criado, mas erro ao criar pacote");
+          router.push("/admin/clients");
+          return;
+        }
+      }
+
+      toast.success(
+        form.service_id
+          ? "Cliente e pacote cadastrados com sucesso!"
+          : "Cliente cadastrado com sucesso!",
+      );
+      router.push("/admin/clients");
+    } catch (error) {
+      console.error("Erro ao cadastrar:", error);
       toast.error("Erro de conexão");
     } finally {
       setLoading(false);
     }
   };
 
+  const selectedService = services.find((s) => s.id === form.service_id);
+  const packagePrice = calculatePackagePrice();
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4 md:gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8 items-start">
-        {/* COLUNA ESQUERDA: Dados do Cliente (Ocupa 2/3) */}
+        {/* COLUNA ESQUERDA: Dados do Cliente */}
         <div className="lg:col-span-2 flex flex-col gap-4">
           <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
             <CardHeader className="px-0 pt-0 md:pt-6 md:px-6 pb-3 md:pb-6">
@@ -138,7 +244,7 @@ export function ClientForm() {
               </CardTitle>
             </CardHeader>
             <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-4 md:gap-5">
-              {/* NOME (Obrigatório) */}
+              {/* NOME */}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="name" className="text-foreground font-medium">
                   Nome Completo *
@@ -211,7 +317,7 @@ export function ClientForm() {
                 </div>
               </div>
 
-              {/* BOTÃO "MAIS OPÇÕES" (Collapsible) */}
+              {/* CAMPOS ADICIONAIS (Collapsible) */}
               <Collapsible
                 open={showMore}
                 onOpenChange={setShowMore}
@@ -219,6 +325,7 @@ export function ClientForm() {
               >
                 <CollapsibleTrigger asChild>
                   <Button
+                    type="button"
                     variant="ghost"
                     className="w-full flex justify-between items-center text-muted-foreground hover:text-primary hover:bg-primary/5 rounded-xl"
                   >
@@ -281,7 +388,7 @@ export function ClientForm() {
                     </div>
                   </div>
 
-                  {/* ENDEREÇO RÁPIDO */}
+                  {/* ENDEREÇO */}
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-center gap-2 text-foreground font-medium mb-1 mt-2">
                       <MapPin className="h-4 w-4 text-muted-foreground" />{" "}
@@ -290,11 +397,11 @@ export function ClientForm() {
                     <div className="grid grid-cols-3 gap-3">
                       <Input
                         placeholder="CEP"
-                        value={form.cep}
+                        value={form.zip_code}
                         onChange={(e) =>
                           setForm({
                             ...form,
-                            cep: formatCepInput(e.target.value),
+                            zip_code: formatCepInput(e.target.value),
                           })
                         }
                         className="col-span-1 bg-muted/50 h-11"
@@ -333,51 +440,145 @@ export function ClientForm() {
           </Card>
         </div>
 
-        {/* COLUNA DIREITA: Pacote Inicial (Ocupa 1/3) */}
+        {/* COLUNA DIREITA: Pacote Inicial (OPCIONAL) */}
         <Card className="lg:col-span-1 border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card mt-2 lg:mt-0 sticky top-4">
           <CardHeader className="px-0 pt-0 md:pt-6 md:px-6 pb-3 md:pb-6">
             <CardTitle className="text-lg flex items-center gap-2">
               <Package className="h-5 w-5 text-primary" />
               Pacote Inicial
+              <span className="text-xs font-normal text-muted-foreground ml-auto">
+                (Opcional)
+              </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
-            <div className="flex flex-col gap-2 bg-primary/5 p-4 rounded-xl border border-primary/10">
-              <Label
-                htmlFor="sessions"
-                className="text-foreground font-medium text-center"
-              >
-                Quantidade de Sessões
+          <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-4">
+            {/* 🔥 SELECT DE SERVIÇO (SEM CHECKBOX) */}
+            <div className="flex flex-col gap-2">
+              <Label className="text-foreground font-medium">
+                Tipo de Serviço
               </Label>
-              <Input
-                id="sessions"
-                type="number"
-                min="1"
-                max="50"
-                value={form.total_sessions}
-                onChange={(e) =>
-                  setForm({ ...form, total_sessions: e.target.value })
-                }
-                className="bg-background border-border/50 h-14 text-2xl font-black text-center"
-              />
-              <p className="text-xs text-muted-foreground text-center mt-1 leading-tight">
-                Quantas sessões o cliente contratou inicialmente?
-              </p>
-              {errors.total_sessions && (
-                <p className="text-xs font-medium text-destructive text-center">
-                  {errors.total_sessions}
+              {loadingServices ? (
+                <div className="h-11 bg-muted/50 rounded-md animate-pulse" />
+              ) : (
+                <Select
+                  value={form.service_id}
+                  onValueChange={(value) =>
+                    setForm({ ...form, service_id: value })
+                  }
+                >
+                  <SelectTrigger className="bg-muted/50 h-11">
+                    <SelectValue placeholder="Selecione o serviço (opcional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.length === 0 ? (
+                      <div className="p-4 text-sm text-muted-foreground text-center">
+                        Nenhum serviço cadastrado.
+                        <br />
+                        <Link
+                          href="/admin/services/new"
+                          className="text-primary hover:underline font-medium"
+                        >
+                          Cadastre o primeiro serviço
+                        </Link>
+                      </div>
+                    ) : (
+                      <>
+                        {/* 🔥 OPÇÃO VAZIA = NÃO VINCULA */}
+                        <SelectItem value="">
+                          <span className="text-muted-foreground">
+                            Sem pacote inicial
+                          </span>
+                        </SelectItem>
+                        {services.map((service) => (
+                          <SelectItem key={service.id} value={service.id}>
+                            <div className="flex flex-col">
+                              <span className="font-medium">
+                                {service.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(Number(service.price))}/sessão
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              )}
+              {errors.service_id && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.service_id}
                 </p>
               )}
             </div>
+
+            {/* 🔥 CAMPOS DE PACOTE (SÓ APARECEM SE SELECIONOU UM SERVIÇO) */}
+            {form.service_id && (
+              <div className="flex flex-col gap-4 animate-in slide-in-from-top-2">
+                {/* QUANTIDADE DE SESSÕES */}
+                <div className="flex flex-col gap-2">
+                  <Label className="text-foreground font-medium">
+                    Quantidade de Sessões
+                  </Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="50"
+                    value={form.total_sessions}
+                    onChange={(e) =>
+                      setForm({ ...form, total_sessions: e.target.value })
+                    }
+                    className="bg-background border-border/50 h-14 text-2xl font-black text-center"
+                  />
+                  {errors.total_sessions && (
+                    <p className="text-xs font-medium text-destructive text-center">
+                      {errors.total_sessions}
+                    </p>
+                  )}
+                </div>
+
+                {/* 🔥 PREVIEW DO PACOTE */}
+                {selectedService && form.total_sessions && (
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-2">
+                    <div className="flex items-center gap-2 text-primary text-sm font-medium">
+                      <Sparkles className="h-4 w-4" />
+                      Resumo do Pacote
+                    </div>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>
+                        {form.total_sessions}x {selectedService.name}
+                      </p>
+                      <p>{selectedService.duration} min por sessão</p>
+                      <p className="font-mono">
+                        Valor unitário:{" "}
+                        {formatCurrency(Number(selectedService.price))}
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-primary/10">
+                      <p className="text-lg font-black text-foreground">
+                        Total: {formatCurrency(packagePrice)}
+                      </p>
+                      {Number(form.total_sessions) >= 5 && (
+                        <p className="text-xs text-green-600 font-medium">
+                          ✓ Desconto aplicado
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* RODAPÉ DO FORMULÁRIO (Fixo na Base) */}
+      {/* RODAPÉ */}
       <div className="flex items-center justify-end gap-3 pt-4 mt-2 border-t border-border/50">
         <Button
           asChild
           variant="ghost"
+          type="button"
           className="hidden sm:flex text-muted-foreground rounded-full md:rounded-md"
         >
           <Link href="/admin/clients">Cancelar</Link>

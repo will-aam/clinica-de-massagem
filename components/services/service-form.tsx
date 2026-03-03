@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -32,28 +34,76 @@ import {
   Save,
   Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { CategorySelect } from "./category-select";
 
 export function ServiceForm() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     category: "",
     description: "",
     duration: "60",
-    color: "#D9C6BF", // Cor padrão da paleta do seu projeto
+    color: "#D9C6BF",
     price: "",
     cost: "",
     isOnline: true,
   });
 
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+
+    if (!form.name.trim()) errs.name = "Nome é obrigatório";
+    if (!form.category) errs.category = "Selecione uma categoria";
+    if (!form.duration) errs.duration = "Selecione a duração";
+    if (!form.price || Number(form.price) <= 0) {
+      errs.price = "Preço deve ser maior que zero";
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validate()) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
     setLoading(true);
-    // Simulação de salvamento na API
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("/api/services", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          category_id: form.category,
+          description: form.description || null,
+          duration: Number(form.duration),
+          price: Number(form.price),
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Serviço cadastrado com sucesso!");
+        router.push("/admin/services");
+      } else {
+        toast.error(data.error || "Erro ao cadastrar serviço");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar serviço:", error);
+      toast.error("Erro de conexão");
+    } finally {
       setLoading(false);
-      console.log("Serviço Salvo:", form);
-    }, 1000);
+    }
   };
 
   return (
@@ -74,7 +124,7 @@ export function ServiceForm() {
             {/* Nome do Serviço */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="name" className="text-foreground font-medium">
-                Nome do Serviço
+                Nome do Serviço *
               </Label>
               <Input
                 id="name"
@@ -82,37 +132,28 @@ export function ServiceForm() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="bg-muted/50 border-border/50 h-11"
-                required
               />
+              {errors.name && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
-            {/* Categoria */}
+            {/* 🔥 Categoria com Select Inteligente */}
             <div className="flex flex-col gap-2">
               <Label
                 htmlFor="category"
                 className="flex items-center gap-2 text-foreground font-medium"
               >
                 <Tag className="h-4 w-4 text-muted-foreground" />
-                Categoria
+                Categoria *
               </Label>
-              <Select
+              <CategorySelect
                 value={form.category}
-                onValueChange={(v) => setForm({ ...form, category: v })}
-              >
-                <SelectTrigger className="bg-muted/50 border-border/50 h-11">
-                  <SelectValue placeholder="Selecione um grupo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="massagem">Massagem</SelectItem>
-                  <SelectItem value="estetica_facial">
-                    Estética Facial
-                  </SelectItem>
-                  <SelectItem value="estetica_corporal">
-                    Estética Corporal
-                  </SelectItem>
-                  <SelectItem value="manicure">Manicure / Pedicure</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => setForm({ ...form, category: value })}
+                error={errors.category}
+              />
             </div>
           </div>
 
@@ -151,7 +192,7 @@ export function ServiceForm() {
             {/* Duração */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="duration" className="text-foreground font-medium">
-                Duração Estimada
+                Duração Estimada *
               </Label>
               <Select
                 value={form.duration}
@@ -169,6 +210,11 @@ export function ServiceForm() {
                   <SelectItem value="120">2 horas</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.duration && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.duration}
+                </p>
+              )}
             </div>
 
             {/* Cor na Agenda */}
@@ -212,7 +258,7 @@ export function ServiceForm() {
             {/* Preço */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="price" className="text-foreground font-medium">
-                Preço de Venda (R$)
+                Preço de Venda (R$) *
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
@@ -221,12 +267,18 @@ export function ServiceForm() {
                 <Input
                   id="price"
                   type="number"
+                  step="0.01"
                   placeholder="0,00"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                   className="bg-muted/50 border-border/50 h-11 pl-9 font-medium text-lg"
                 />
               </div>
+              {errors.price && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.price}
+                </p>
+              )}
             </div>
 
             {/* Custo de Insumo */}
@@ -245,6 +297,7 @@ export function ServiceForm() {
                 <Input
                   id="cost"
                   type="number"
+                  step="0.01"
                   placeholder="0,00"
                   value={form.cost}
                   onChange={(e) => setForm({ ...form, cost: e.target.value })}
@@ -284,23 +337,25 @@ export function ServiceForm() {
       {/* RODAPÉ: Botões de Ação */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/50">
         <Button
+          asChild
           variant="ghost"
-          className="hidden sm:flex text-muted-foreground rounded-full"
+          type="button"
+          className="hidden sm:flex text-muted-foreground rounded-full md:rounded-md"
         >
-          Cancelar
+          <Link href="/admin/services">Cancelar</Link>
         </Button>
         <Button
           type="submit"
           size="lg"
           disabled={loading}
-          className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          className="w-full sm:w-auto rounded-full md:rounded-md shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
         >
           {loading ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
             <Save className="mr-2 h-5 w-5" />
           )}
-          Salvar Serviço
+          {loading ? "Salvando..." : "Salvar Serviço"}
         </Button>
       </div>
     </form>

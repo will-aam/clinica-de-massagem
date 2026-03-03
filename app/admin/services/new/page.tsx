@@ -1,3 +1,4 @@
+// app/admin/services/new/page.tsx
 import Link from "next/link";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ export default function NewServicePage() {
               Cadastrar Serviço
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Crie um novo serviço avulso para sua clínica.
+              Crie um novo serviço avulso.
             </p>
           </div>
         </div>
