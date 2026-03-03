@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Card,
   CardContent,
@@ -22,25 +24,75 @@ import {
   Loader2,
   Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export function PackageForm() {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
     total_sessions: "10",
     price: "",
-    validity_days: "90", // Validade do pacote (ex: tem que usar em 3 meses)
-    isActive: true,
+    validity_days: "90",
+    is_active: true,
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const validate = () => {
+    const errs: Record<string, string> = {};
+
+    if (!form.name.trim()) errs.name = "Nome é obrigatório";
+    if (!form.total_sessions || Number(form.total_sessions) < 1) {
+      errs.total_sessions = "Mínimo 1 sessão";
+    }
+    if (!form.price || Number(form.price) <= 0) {
+      errs.price = "Preço deve ser maior que zero";
+    }
+
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validate()) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      const res = await fetch("/api/package-templates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description || null,
+          total_sessions: Number(form.total_sessions),
+          price: Number(form.price),
+          validity_days: form.validity_days ? Number(form.validity_days) : null,
+          is_active: form.is_active,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Pacote cadastrado com sucesso!");
+        router.push("/admin/services?tab=packages");
+      } else {
+        toast.error(data.error || "Erro ao cadastrar pacote");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar pacote:", error);
+      toast.error("Erro de conexão");
+    } finally {
       setLoading(false);
-      console.log("Pacote Salvo:", form);
-    }, 1000);
+    }
   };
 
   return (
@@ -60,7 +112,7 @@ export function PackageForm() {
           <div className="grid md:grid-cols-2 gap-5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="name" className="text-foreground font-medium">
-                Nome do Pacote / Plano
+                Nome do Pacote / Plano *
               </Label>
               <Input
                 id="name"
@@ -68,8 +120,12 @@ export function PackageForm() {
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="bg-muted/50 border-border/50 h-11"
-                required
               />
+              {errors.name && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.name}
+                </p>
+              )}
             </div>
 
             <div className="flex flex-col gap-2">
@@ -78,7 +134,7 @@ export function PackageForm() {
                 className="flex items-center gap-2 text-foreground font-medium"
               >
                 <Layers className="h-4 w-4 text-muted-foreground" />
-                Quantidade de Sessões
+                Quantidade de Sessões *
               </Label>
               <Input
                 id="sessions"
@@ -90,8 +146,12 @@ export function PackageForm() {
                   setForm({ ...form, total_sessions: e.target.value })
                 }
                 className="bg-muted/50 border-border/50 h-11 font-bold"
-                required
               />
+              {errors.total_sessions && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.total_sessions}
+                </p>
+              )}
             </div>
           </div>
 
@@ -127,7 +187,7 @@ export function PackageForm() {
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
             <div className="flex flex-col gap-2">
               <Label htmlFor="price" className="text-foreground font-medium">
-                Valor Total do Pacote (R$)
+                Valor Total do Pacote (R$) *
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
@@ -136,12 +196,18 @@ export function PackageForm() {
                 <Input
                   id="price"
                   type="number"
+                  step="0.01"
                   placeholder="0,00"
                   value={form.price}
                   onChange={(e) => setForm({ ...form, price: e.target.value })}
                   className="bg-muted/50 border-border/50 h-11 pl-9 font-bold text-lg text-primary"
                 />
               </div>
+              {errors.price && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.price}
+                </p>
+              )}
               <p className="text-[11px] text-muted-foreground">
                 Este é o valor que será lançado no financeiro quando o cliente
                 contratar.
@@ -166,6 +232,7 @@ export function PackageForm() {
                 <Input
                   id="validity"
                   type="number"
+                  min="0"
                   placeholder="Ex: 90"
                   value={form.validity_days}
                   onChange={(e) =>
@@ -178,7 +245,8 @@ export function PackageForm() {
                 </span>
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Tempo limite para o cliente consumir todas as sessões.
+                Tempo limite para o cliente consumir todas as sessões. Deixe
+                vazio para sem limite.
               </p>
             </div>
           </CardContent>
@@ -199,9 +267,9 @@ export function PackageForm() {
             </p>
           </div>
           <Switch
-            checked={form.isActive}
+            checked={form.is_active}
             onCheckedChange={(checked) =>
-              setForm({ ...form, isActive: checked })
+              setForm({ ...form, is_active: checked })
             }
           />
         </CardContent>
@@ -210,23 +278,25 @@ export function PackageForm() {
       {/* RODAPÉ */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t border-border/50">
         <Button
+          asChild
           variant="ghost"
-          className="hidden sm:flex text-muted-foreground rounded-full"
+          type="button"
+          className="hidden sm:flex text-muted-foreground rounded-full md:rounded-md"
         >
-          Cancelar
+          <Link href="/admin/services?tab=packages">Cancelar</Link>
         </Button>
         <Button
           type="submit"
           size="lg"
           disabled={loading}
-          className="w-full sm:w-auto rounded-full shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
+          className="w-full sm:w-auto rounded-full md:rounded-md shadow-sm hover:shadow-md transition-all active:scale-[0.98]"
         >
           {loading ? (
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
           ) : (
             <Save className="mr-2 h-5 w-5" />
           )}
-          Salvar Pacote
+          {loading ? "Salvando..." : "Salvar Pacote"}
         </Button>
       </div>
     </form>

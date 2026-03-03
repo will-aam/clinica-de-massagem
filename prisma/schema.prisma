@@ -16,8 +16,8 @@ datasource db {
 
 model Organization {
   id         String   @id @default(cuid())
-  name       String // Nome Fantasia da Unidade/Empresa
-  slug       String   @unique // Para URLs amigáveis ex: totten.com/clinica-aracaju
+  name       String
+  slug       String   @unique
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 
@@ -29,9 +29,11 @@ model Organization {
   clients           Client[]
   categories        Category[]
   services          Service[]
+  package_templates PackageTemplate[]
   packages          Package[]
+  service_durations ServiceDuration[] // 🔥 ALTERADO
   appointments      Appointment[]
-  check_ins         CheckIn[] // 🔥 ADICIONADO
+  check_ins         CheckIn[]
 
   @@map("organizations")
 }
@@ -135,7 +137,7 @@ model Client {
 
   packages     Package[]
   appointments Appointment[]
-  check_ins    CheckIn[] // 🔥 ADICIONADO
+  check_ins    CheckIn[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -183,6 +185,26 @@ model Service {
 // 5. PACOTES E VOUCHERS
 // ==========================================
 
+// 🔥 NOVO: Template de Pacote (Modelo que pode ser vendido)
+model PackageTemplate {
+  id             String   @id @default(cuid())
+  name           String   // Ex: "Pacote 10 Sessões - Drenagem"
+  description    String?  @db.Text
+  total_sessions Int      // Quantidade de sessões que vem no pacote
+  price          Decimal  // Preço de venda do pacote
+  validity_days  Int?     // Dias para expirar (null = sem limite)
+  is_active      Boolean  @default(true) // Se está disponível para venda
+
+  organization_id String
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("package_templates")
+}
+
+// Pacote já vendido para um cliente
 model Package {
   id             String  @id @default(cuid())
   name           String
@@ -202,7 +224,7 @@ model Package {
 
   appointments Appointment[]
   vouchers     Voucher[]
-  check_ins    CheckIn[] // 🔥 ADICIONADO
+  check_ins    CheckIn[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -271,11 +293,29 @@ model Appointment {
   @@map("appointments")
 }
 
+// ==========================================
+// 5.5. OPÇÕES DE DURAÇÃO DE SERVIÇOS
+// ==========================================
+
+model ServiceDuration {
+  id          String  @id @default(cuid())
+  label       String  // Ex: "30 minutos", "1 hora e 30 minutos"
+  minutes     Int     // Valor em minutos: 30, 60, 90, etc.
+  is_active   Boolean @default(true)
+  display_order Int   @default(0) // Para ordenar na lista
+
+  organization_id String
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  created_at DateTime @default(now())
+
+  @@unique([organization_id, minutes])
+  @@map("service_durations")
+}
 model CheckIn {
   id             String       @id @default(cuid())
   date_time      DateTime     @default(now())
   
-  // 🔥 TORNAR OPCIONAL (adicionar ?)
   appointment_id String?      @unique
   appointment    Appointment? @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
   

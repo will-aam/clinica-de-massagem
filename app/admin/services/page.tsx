@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
+import { DurationManager } from "@/components/service-durations/duration-manager";
 import {
   Plus,
   Cog,
@@ -18,6 +19,8 @@ import {
   Tags,
   Clock,
   Loader2,
+  Layers,
+  CalendarDays,
 } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -31,6 +34,24 @@ type Service = {
   category: {
     id: string;
     name: string;
+  };
+};
+
+type PackageTemplate = {
+  id: string;
+  name: string;
+  description: string | null;
+  total_sessions: number;
+  price: number;
+  validity_days: number | null;
+  is_active: boolean;
+};
+
+type Category = {
+  id: string;
+  name: string;
+  _count: {
+    services: number;
   };
 };
 
@@ -63,9 +84,18 @@ function ServicesTabs() {
   const initialTab = searchParams.get("tab") || "services";
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // 🔥 Busca serviços da API
-  const { data: services, isLoading } = useSWR<Service[]>(
+  // 🔥 Busca dados das APIs
+  const { data: services, isLoading: loadingServices } = useSWR<Service[]>(
     "/api/services",
+    fetcher,
+  );
+
+  const { data: packages, isLoading: loadingPackages } = useSWR<
+    PackageTemplate[]
+  >("/api/package-templates", fetcher);
+
+  const { data: categories, isLoading: loadingCategories } = useSWR<Category[]>(
+    "/api/categories",
     fetcher,
   );
 
@@ -105,7 +135,7 @@ function ServicesTabs() {
             </TabsTrigger>
           </TabsList>
 
-          {/* 🔥 Botão "Novo Serviço" aparece apenas na aba de serviços */}
+          {/* 🔥 Botões dinâmicos baseados na aba ativa */}
           {activeTab === "services" && (
             <Button
               asChild
@@ -118,13 +148,26 @@ function ServicesTabs() {
               </Link>
             </Button>
           )}
+
+          {activeTab === "packages" && (
+            <Button
+              asChild
+              size="default"
+              className="rounded-full md:rounded-md shadow-sm shrink-0"
+            >
+              <Link href="/admin/packages/new">
+                <Plus className="mr-2 h-4 w-4" />
+                Novo Pacote
+              </Link>
+            </Button>
+          )}
         </div>
 
         {/* ABA 1: LISTA DE SERVIÇOS */}
         <TabsContent value="services" className="mt-0 outline-none">
           <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
             <CardContent className="p-6">
-              {isLoading ? (
+              {loadingServices ? (
                 <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                   <Loader2 className="h-8 w-8 animate-spin mb-4" />
                   <p className="text-sm">Carregando serviços...</p>
@@ -179,7 +222,7 @@ function ServicesTabs() {
                           {formatDuration(service.duration)}
                         </span>
                         <span className="text-sm font-bold text-foreground">
-                          {formatCurrency(service.price)}
+                          {formatCurrency(Number(service.price))}
                         </span>
                       </div>
                     </Link>
@@ -194,26 +237,80 @@ function ServicesTabs() {
         <TabsContent value="packages" className="mt-0 outline-none">
           <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
-                <Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground">
-                  Nenhum pacote cadastrado
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground max-w-sm mb-6">
-                  Crie planos ou combos mensais de sessões para fidelizar seus
-                  clientes.
-                </p>
-                <Button
-                  asChild
-                  size="lg"
-                  className="rounded-full shadow-sm hover:scale-105 transition-all"
-                >
-                  <Link href="/admin/packages/new">
-                    <Plus className="mr-2 h-5 w-5" />
-                    Novo Pacote
-                  </Link>
-                </Button>
-              </div>
+              {loadingPackages ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  <p className="text-sm">Carregando pacotes...</p>
+                </div>
+              ) : !packages || packages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+                  <Package className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Nenhum pacote cadastrado
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground max-w-sm mb-6">
+                    Crie planos ou combos mensais de sessões para fidelizar seus
+                    clientes.
+                  </p>
+                  <Button
+                    asChild
+                    size="lg"
+                    className="rounded-full shadow-sm hover:scale-105 transition-all"
+                  >
+                    <Link href="/admin/packages/new">
+                      <Plus className="mr-2 h-5 w-5" />
+                      Novo Pacote
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {packages.map((pkg) => (
+                    <Link
+                      key={pkg.id}
+                      href={`/admin/packages/${pkg.id}`}
+                      className="group flex flex-col gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 hover:border-primary/50 transition-all active:scale-[0.98]"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {pkg.name}
+                        </h3>
+                        <Badge
+                          variant={pkg.is_active ? "default" : "secondary"}
+                          className="text-[10px] shrink-0"
+                        >
+                          {pkg.is_active ? "Ativo" : "Inativo"}
+                        </Badge>
+                      </div>
+                      {pkg.description && (
+                        <p className="text-xs text-muted-foreground line-clamp-2">
+                          {pkg.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <Layers className="h-3 w-3" />
+                          {pkg.total_sessions} sessões
+                        </span>
+                        {pkg.validity_days && (
+                          <span className="flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3" />
+                            {pkg.validity_days} dias
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
+                        <span className="text-xs text-muted-foreground">
+                          Preço total
+                        </span>
+                        <span className="text-sm font-bold text-foreground">
+                          {formatCurrency(Number(pkg.price))}
+                        </span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -222,52 +319,66 @@ function ServicesTabs() {
         <TabsContent value="categories" className="mt-0 outline-none">
           <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
             <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
-                <Tags className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground">
-                  Nenhuma categoria
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground max-w-sm mb-6">
-                  Crie grupos (ex: Massagens, Estética Facial) para organizar
-                  seus serviços na agenda.
-                </p>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full shadow-sm hover:bg-muted"
-                >
-                  <Plus className="mr-2 h-5 w-5" />
-                  Nova Categoria
-                </Button>
-              </div>
+              {loadingCategories ? (
+                <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                  <p className="text-sm">Carregando categorias...</p>
+                </div>
+              ) : !categories || categories.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+                  <Tags className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                  <h3 className="text-lg font-semibold text-foreground">
+                    Nenhuma categoria
+                  </h3>
+                  <p className="mt-2 text-sm text-muted-foreground max-w-sm mb-6">
+                    As categorias são criadas automaticamente quando você
+                    cadastra serviços.
+                  </p>
+                  <Button
+                    asChild
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full shadow-sm hover:bg-muted"
+                  >
+                    <Link href="/admin/services/new">
+                      <Plus className="mr-2 h-5 w-5" />
+                      Cadastrar Primeiro Serviço
+                    </Link>
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {categories.map((category) => (
+                    <div
+                      key={category.id}
+                      className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:bg-muted/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          <Tags className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            {category.name}
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            {category._count.services}{" "}
+                            {category._count.services === 1
+                              ? "serviço"
+                              : "serviços"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* ABA 4: HORÁRIOS */}
         <TabsContent value="schedules" className="mt-0 outline-none">
-          <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
-                <Clock className="h-12 w-12 text-muted-foreground/40 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground">
-                  Configuração de Horários
-                </h3>
-                <p className="mt-2 text-sm text-muted-foreground max-w-sm mb-6">
-                  Defina seus dias e turnos de atendimento para o sistema montar
-                  os horários disponíveis.
-                </p>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="rounded-full shadow-sm hover:bg-muted"
-                >
-                  <Clock className="mr-2 h-5 w-5" />
-                  Configurar Turnos
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          <DurationManager />
         </TabsContent>
       </Tabs>
 

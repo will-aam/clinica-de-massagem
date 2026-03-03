@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -37,14 +37,22 @@ import {
 import { toast } from "sonner";
 import { CategorySelect } from "./category-select";
 
+type Duration = {
+  id: string;
+  label: string;
+  minutes: number;
+};
+
 export function ServiceForm() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [loadingDurations, setLoadingDurations] = useState(true);
+  const [durations, setDurations] = useState<Duration[]>([]);
   const [form, setForm] = useState({
     name: "",
     category: "",
     description: "",
-    duration: "60",
+    duration: "",
     color: "#D9C6BF",
     price: "",
     cost: "",
@@ -52,6 +60,25 @@ export function ServiceForm() {
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // 🔥 Busca durações cadastradas
+  useEffect(() => {
+    const fetchDurations = async () => {
+      try {
+        const res = await fetch("/api/service-durations");
+        if (res.ok) {
+          const data = await res.json();
+          setDurations(data);
+        }
+      } catch (error) {
+        console.error("Erro ao buscar durações:", error);
+      } finally {
+        setLoadingDurations(false);
+      }
+    };
+
+    fetchDurations();
+  }, []);
 
   const validate = () => {
     const errs: Record<string, string> = {};
@@ -189,27 +216,45 @@ export function ServiceForm() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
-            {/* Duração */}
+            {/* 🔥 Duração - Agora busca da API */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="duration" className="text-foreground font-medium">
                 Duração Estimada *
               </Label>
-              <Select
-                value={form.duration}
-                onValueChange={(v) => setForm({ ...form, duration: v })}
-              >
-                <SelectTrigger className="bg-muted/50 border-border/50 h-11">
-                  <SelectValue placeholder="Tempo de atendimento" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="15">15 minutos</SelectItem>
-                  <SelectItem value="30">30 minutos</SelectItem>
-                  <SelectItem value="45">45 minutos</SelectItem>
-                  <SelectItem value="60">1 hora</SelectItem>
-                  <SelectItem value="90">1 hora e 30 minutos</SelectItem>
-                  <SelectItem value="120">2 horas</SelectItem>
-                </SelectContent>
-              </Select>
+              {loadingDurations ? (
+                <div className="h-11 bg-muted/50 rounded-md animate-pulse" />
+              ) : durations.length === 0 ? (
+                <div className="p-3 bg-muted/30 rounded-lg border border-dashed border-border">
+                  <p className="text-xs text-muted-foreground">
+                    Nenhuma duração cadastrada.{" "}
+                    <Link
+                      href="/admin/services?tab=schedules"
+                      className="text-primary hover:underline font-medium"
+                    >
+                      Cadastre as opções de tempo
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <Select
+                  value={form.duration}
+                  onValueChange={(v) => setForm({ ...form, duration: v })}
+                >
+                  <SelectTrigger className="bg-muted/50 border-border/50 h-11">
+                    <SelectValue placeholder="Tempo de atendimento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {durations.map((duration) => (
+                      <SelectItem
+                        key={duration.id}
+                        value={duration.minutes.toString()}
+                      >
+                        {duration.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {errors.duration && (
                 <p className="text-xs font-medium text-destructive ml-1">
                   {errors.duration}
