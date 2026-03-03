@@ -16,6 +16,7 @@ import { toast } from "sonner";
 interface PackageVoucherProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  packageId: string; // 🔥 NOVO
   clientName: string;
   packageName: string;
   totalSessions: number;
@@ -24,6 +25,7 @@ interface PackageVoucherProps {
 export function PackageVoucher({
   open,
   onOpenChange,
+  packageId,
   clientName,
   packageName,
   totalSessions,
@@ -31,17 +33,27 @@ export function PackageVoucher({
   const cardRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Função que tira a "foto" da div e baixa ou compartilha
+  // 🔥 Registra voucher na API
+  const registerVoucher = async () => {
+    try {
+      await fetch("/api/vouchers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ package_id: packageId }),
+      });
+    } catch (error) {
+      console.error("Erro ao registrar voucher:", error);
+    }
+  };
+
   const handleExport = async (action: "download" | "share") => {
     if (!cardRef.current) return;
     setIsExporting(true);
 
     try {
-      // Pega as dimensões exatas do elemento na tela para evitar cortes
       const width = cardRef.current.offsetWidth;
       const height = cardRef.current.offsetHeight;
 
-      // Gera a imagem forçando a largura e altura, e removendo distorções de margem
       const dataUrl = await toPng(cardRef.current, {
         quality: 1,
         pixelRatio: 3,
@@ -60,6 +72,7 @@ export function PackageVoucher({
         link.href = dataUrl;
         link.click();
         toast.success("Comprovante baixado com sucesso!");
+        await registerVoucher(); // 🔥 Registra na API
       }
 
       if (action === "share") {
@@ -72,6 +85,7 @@ export function PackageVoucher({
             text: `Parabéns ${clientName.split(" ")[0]}! Você concluiu seu pacote conosco. 💆‍♀️✨`,
             files: [file],
           });
+          await registerVoucher(); // 🔥 Registra na API
         } else {
           handleExport("download");
           toast.info(
@@ -97,14 +111,11 @@ export function PackageVoucher({
           </DialogDescription>
         </DialogHeader>
 
-        {/* O container PAI assume o controle total do alinhamento */}
         <div className="flex flex-col items-center justify-center py-2 sm:py-4 w-full overflow-hidden">
-          {/* O CARD foi travado com w-[280px] e o mx-auto foi removido para não bugar o html-to-image */}
           <div
             ref={cardRef}
             className="w-70 bg-[#FAF9F6] border-2 border-[#D9C6BF] p-5 rounded-2xl flex flex-col items-center text-center shadow-sm relative overflow-hidden shrink-0"
           >
-            {/* Elemento decorativo de fundo */}
             <div className="absolute -top-10 -right-10 text-[#D9C6BF]/20 pointer-events-none">
               <Heart className="h-28 w-28 fill-current" />
             </div>
@@ -151,7 +162,6 @@ export function PackageVoucher({
           </div>
         </div>
 
-        {/* Botões empilhados ou lado a lado de forma compacta */}
         <div className="flex flex-col gap-2 w-full mt-2">
           <Button
             variant="outline"

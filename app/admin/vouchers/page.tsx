@@ -1,64 +1,48 @@
 "use client";
 
 import { useState } from "react";
+import useSWR from "swr";
 import { AdminHeader } from "@/components/admin-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import { PackageVoucher } from "@/components/client/package-voucher";
-import { Search, Award, CheckCircle2 } from "lucide-react";
+import { Search, Award, Loader2, CheckCircle2 } from "lucide-react";
 
-// DADOS MOCKADOS apenas para a página de Vouchers
-const mockCompletedPackages = [
-  {
-    id: "1",
-    clientName: "Juliana Albuquerque",
-    packageName: "Projeto Verão (Drenagem + Modeladora)",
-    totalSessions: 10,
-    completionDate: "27 Fev 2026",
-  },
-  {
-    id: "2",
-    clientName: "Mariana Costa",
-    packageName: "Massagem Relaxante Mensal",
-    totalSessions: 4,
-    completionDate: "25 Fev 2026",
-  },
-  {
-    id: "3",
-    clientName: "Amanda Silva",
-    packageName: "Pacote Limpeza de Pele Profunda",
-    totalSessions: 3,
-    completionDate: "20 Fev 2026",
-  },
-  {
-    id: "4",
-    clientName: "Carla Mendes",
-    packageName: "Projeto Verão (Drenagem + Modeladora)",
-    totalSessions: 10,
-    completionDate: "15 Fev 2026",
-  },
-];
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+type CompletedPackage = {
+  id: string;
+  clientId: string;
+  clientName: string;
+  packageName: string;
+  serviceName: string;
+  totalSessions: number;
+  completionDate: string;
+  hasVoucher: boolean;
+  lastVoucherDate?: Date;
+};
 
 export default function VouchersPage() {
   const [search, setSearch] = useState("");
-
-  // Controle do Modal do Comprovante
   const [voucherOpen, setVoucherOpen] = useState(false);
-  const [selectedVoucher, setSelectedVoucher] = useState(
-    mockCompletedPackages[0],
+  const [selectedVoucher, setSelectedVoucher] =
+    useState<CompletedPackage | null>(null);
+
+  const { data: completedPackages, isLoading } = useSWR<CompletedPackage[]>(
+    "/api/vouchers",
+    fetcher,
   );
 
-  // Filtro de busca na demonstração
-  const filteredVouchers = mockCompletedPackages.filter(
+  // Filtro de busca
+  const filteredVouchers = (completedPackages || []).filter(
     (item) =>
       item.clientName.toLowerCase().includes(search.toLowerCase()) ||
       item.packageName.toLowerCase().includes(search.toLowerCase()),
   );
 
-  const handleOpenVoucher = (
-    voucherData: (typeof mockCompletedPackages)[0],
-  ) => {
+  const handleOpenVoucher = (voucherData: CompletedPackage) => {
     setSelectedVoucher(voucherData);
     setVoucherOpen(true);
   };
@@ -91,7 +75,7 @@ export default function VouchersPage() {
           </div>
         </div>
 
-        {/* Lista de Vouchers (Mockada) */}
+        {/* Lista de Vouchers */}
         <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
           <CardHeader className="hidden md:flex px-6 pt-6 pb-2">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -100,9 +84,24 @@ export default function VouchersPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0 md:p-6 flex flex-col gap-3">
-            {filteredVouchers.length === 0 ? (
-              <div className="text-center py-10 text-muted-foreground">
-                Nenhum voucher encontrado com esta busca.
+            {isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mb-4" />
+                <p className="text-sm">Carregando vouchers...</p>
+              </div>
+            ) : filteredVouchers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-xl border border-dashed border-border">
+                <Award className="h-12 w-12 text-muted-foreground/40 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground">
+                  {search
+                    ? "Nenhum voucher encontrado"
+                    : "Nenhum pacote concluído"}
+                </h3>
+                <p className="mt-2 text-sm text-muted-foreground max-w-sm">
+                  {search
+                    ? "Tente buscar por outro cliente ou pacote."
+                    : "Quando um cliente concluir todas as sessões do pacote, o voucher aparecerá aqui."}
+                </p>
               </div>
             ) : (
               filteredVouchers.map((item) => (
@@ -111,7 +110,7 @@ export default function VouchersPage() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between p-4 md:p-5 bg-card md:bg-muted/30 rounded-xl border border-border/50 hover:border-primary/30 transition-colors gap-4"
                 >
                   {/* Info do Cliente */}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-start gap-4">
                     <div className="flex flex-col">
                       <span className="font-semibold text-foreground text-base leading-tight">
                         {item.clientName}
@@ -119,6 +118,15 @@ export default function VouchersPage() {
                       <span className="text-sm text-muted-foreground mt-0.5">
                         {item.packageName} • {item.totalSessions} Sessões
                       </span>
+                      {item.hasVoucher && (
+                        <Badge
+                          variant="outline"
+                          className="mt-2 w-fit text-[10px] bg-green-50 text-green-700 border-green-200"
+                        >
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Voucher já emitido
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -133,7 +141,7 @@ export default function VouchersPage() {
                       className="rounded-full shadow-sm bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground transition-all shrink-0"
                     >
                       <Award className="mr-2 h-4 w-4" />
-                      Gerar Voucher
+                      {item.hasVoucher ? "Reenviar" : "Gerar Voucher"}
                     </Button>
                   </div>
                 </div>
@@ -144,13 +152,16 @@ export default function VouchersPage() {
       </div>
 
       {/* MODAL DO COMPROVANTE */}
-      <PackageVoucher
-        open={voucherOpen}
-        onOpenChange={setVoucherOpen}
-        clientName={selectedVoucher.clientName}
-        packageName={selectedVoucher.packageName}
-        totalSessions={selectedVoucher.totalSessions}
-      />
+      {selectedVoucher && (
+        <PackageVoucher
+          open={voucherOpen}
+          onOpenChange={setVoucherOpen}
+          packageId={selectedVoucher.id}
+          clientName={selectedVoucher.clientName}
+          packageName={selectedVoucher.packageName}
+          totalSessions={selectedVoucher.totalSessions}
+        />
+      )}
     </>
   );
 }

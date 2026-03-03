@@ -1,3 +1,4 @@
+// app/totem/error/page.tsx
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -21,6 +22,11 @@ const errorMessages: Record<string, { title: string; description: string }> = {
     title: "Nenhum pacote ativo",
     description:
       "Você não possui um pacote de sessões ativo. Fale com a recepção.",
+  },
+  CHECKIN_DUPLICATE: {
+    title: "Check-in já realizado",
+    description:
+      "Você já fez check-in hoje neste pacote. Aproveite seu atendimento!",
   },
   UNKNOWN: {
     title: "Erro inesperado",
