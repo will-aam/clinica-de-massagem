@@ -1,7 +1,7 @@
 // app/admin/agenda/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format, startOfWeek, addDays, subDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AdminHeader } from "@/components/admin-header";
@@ -30,44 +30,6 @@ import {
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal";
 import { AppointmentDetailsModal } from "@/components/agenda/appointment-details-modal";
 
-// --- DADOS FALSOS (MOCKS) ---
-const MOCK_APPOINTMENTS: Appointment[] = [
-  {
-    id: "1",
-    time: "08:00",
-    duration: 60,
-    clientName: "Leda Paula",
-    service: "Drenagem Linfática",
-    sessionInfo: "Sessão 4 de 10",
-    isRecurring: true,
-    phone: "5579999999999",
-    color: "bg-emerald-100 border-emerald-300 text-emerald-900",
-    hasCharge: true,
-  },
-  {
-    id: "2",
-    time: "09:30",
-    duration: 60,
-    clientName: "Mariana Costa",
-    service: "Massagem Relaxante",
-    sessionInfo: "Avulsa",
-    isRecurring: false,
-    phone: "5579999999999",
-    color: "bg-blue-100 border-blue-300 text-blue-900",
-  },
-  {
-    id: "3",
-    time: "14:00",
-    duration: 90,
-    clientName: "Camila Silva",
-    service: "Projeto Verão (Combo)",
-    sessionInfo: "Sessão 2 de 5",
-    isRecurring: true,
-    phone: "5579999999999",
-    color: "bg-rose-100 border-rose-300 text-rose-900",
-  },
-];
-
 export default function AgendaPage() {
   // Estado da data SELECIONADA (aquela que mostra a grade)
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -81,6 +43,16 @@ export default function AgendaPage() {
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
+
+  // Estado dos agendamentos (dados reais da API)
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(false);
+
+  // TODO FUTURO:
+  // Pegar o organizationId a partir da sessão do admin logado
+  // ou a partir de um contexto global da clínica selecionada.
+  // Por enquanto, para testes, você pode colocar o ID fixo de uma Organization.
+  const organizationId = "cmm9qg8yj0003cg1ol9a8n9l5"; // <- preencha com o ID da sua Organization para testar
 
   // Formatação Responsiva do Dia
   // Desktop: "Sábado, 28 Fev"
@@ -103,6 +75,41 @@ export default function AgendaPage() {
   // Funções para navegar semanas inteiras
   const nextWeek = () => setWeekStart(addDays(weekStart, 7));
   const prevWeek = () => setWeekStart(subDays(weekStart, 7));
+
+  // Carrega agendamentos sempre que a data mudar (e quando tivermos organizationId)
+  useEffect(() => {
+    async function loadAppointments() {
+      if (!organizationId) {
+        // Enquanto não tivermos org definida, não chama a API
+        setAppointments([]);
+        return;
+      }
+
+      setLoadingAppointments(true);
+      try {
+        const dateStr = format(selectedDate, "yyyy-MM-dd");
+        const res = await fetch(
+          `/api/admin/agenda/day?date=${dateStr}&organizationId=${organizationId}`,
+        );
+
+        if (!res.ok) {
+          console.error("Falha ao carregar agendamentos do dia");
+          setAppointments([]);
+          return;
+        }
+
+        const data = await res.json();
+        setAppointments(data.appointments ?? []);
+      } catch (error) {
+        console.error("Erro ao carregar agendamentos:", error);
+        setAppointments([]);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    }
+
+    loadAppointments();
+  }, [selectedDate, organizationId]);
 
   return (
     <>
@@ -128,7 +135,9 @@ export default function AgendaPage() {
                     <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
                   </h1>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    Você tem {MOCK_APPOINTMENTS.length} agendamentos.
+                    {loadingAppointments
+                      ? "Carregando agendamentos..."
+                      : `Você tem ${appointments.length} agendamentos.`}
                   </p>
                 </div>
               </div>
@@ -229,7 +238,7 @@ export default function AgendaPage() {
 
         {/* --- A GRADE DA AGENDA --- */}
         <DailyAgendaGrid
-          appointments={MOCK_APPOINTMENTS}
+          appointments={appointments}
           onAppointmentClick={(appt) => setSelectedAppointment(appt)}
         />
       </div>
@@ -238,6 +247,13 @@ export default function AgendaPage() {
       <NewAppointmentModal
         open={isNewModalOpen}
         onOpenChange={setIsNewModalOpen}
+        organizationId={organizationId}
+        onCreated={() => {
+          // força recarregar os agendamentos do dia atual
+          // basta alterar o selectedDate para o mesmo valor,
+          // o useEffect vai rodar de novo
+          setSelectedDate((d) => new Date(d));
+        }}
       />
 
       <AppointmentDetailsModal

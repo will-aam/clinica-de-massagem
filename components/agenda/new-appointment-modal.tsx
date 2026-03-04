@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -37,11 +37,34 @@ import {
   Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { createAppointment } from "@/app/actions/appointments";
 
 interface NewAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /**
+   * Organização atual do Admin (id da Organization).
+   * Idealmente vem da sessão/autenticação.
+   */
+  organizationId: string;
+  /**
+   * Callback opcional para o pai recarregar a agenda
+   * depois de salvar um agendamento novo.
+   */
+  onCreated?: () => void;
 }
+
+// Tipos simples para listar clientes e serviços
+type ClientOption = {
+  id: string;
+  name: string;
+};
+
+type ServiceOption = {
+  id: string;
+  name: string;
+};
 
 // Gera os horários de 30 em 30 minutos (08:00 até 19:00)
 const TIME_SLOTS = Array.from({ length: 23 }, (_, i) => {
@@ -53,14 +76,134 @@ const TIME_SLOTS = Array.from({ length: 23 }, (_, i) => {
 export function NewAppointmentModal({
   open,
   onOpenChange,
+  organizationId,
+  onCreated,
 }: NewAppointmentModalProps) {
   const [isRecurring, setIsRecurring] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
+  const [time, setTime] = useState<string | undefined>(undefined);
   const [sessions, setSessions] = useState(5);
+
+  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [services, setServices] = useState<ServiceOption[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string | undefined>(
+    undefined,
+  );
+  const [selectedServiceId, setSelectedServiceId] = useState<
+    string | undefined
+  >(undefined);
+
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const incrementSessions = () => setSessions((prev) => prev + 1);
   const decrementSessions = () =>
     setSessions((prev) => (prev > 2 ? prev - 1 : 2));
+
+  // Carrega lista básica de clientes e serviços da organização
+  useEffect(() => {
+    async function loadOptions() {
+      if (!open || !organizationId) return;
+
+      setLoadingOptions(true);
+      try {
+        const [clientsRes, servicesRes] = await Promise.all([
+          fetch(`/api/admin/clients?organizationId=${organizationId}`),
+          fetch(`/api/admin/services?organizationId=${organizationId}`),
+        ]);
+
+        if (clientsRes.ok) {
+          const data = await clientsRes.json();
+          setClients(
+            (data.clients ?? []).map((c: any) => ({
+              id: c.id,
+              name: c.name,
+            })),
+          );
+        } else {
+          console.error("Falha ao carregar clientes");
+        }
+
+        if (servicesRes.ok) {
+          const data = await servicesRes.json();
+          setServices(
+            (data.services ?? []).map((s: any) => ({
+              id: s.id,
+              name: s.name,
+            })),
+          );
+        } else {
+          console.error("Falha ao carregar serviços");
+        }
+      } catch (error) {
+        console.error("Erro ao carregar opções de cliente/serviço:", error);
+      } finally {
+        setLoadingOptions(false);
+      }
+    }
+
+    loadOptions();
+  }, [open, organizationId]);
+
+  const handleSave = async () => {
+    if (!organizationId) {
+      toast.error("Organização não definida.");
+      return;
+    }
+    if (!selectedClientId) {
+      toast.error("Selecione uma cliente.");
+      return;
+    }
+    if (!selectedServiceId) {
+      toast.error("Selecione um serviço.");
+      return;
+    }
+    if (!date) {
+      toast.error("Selecione a data da sessão.");
+      return;
+    }
+    if (!time) {
+      toast.error("Selecione o horário.");
+      return;
+    }
+
+    // Monta o DateTime combinando data + horário
+    const [hourStr, minuteStr] = time.split(":");
+    const fullDateTime = new Date(date);
+    fullDateTime.setHours(Number(hourStr), Number(minuteStr), 0, 0);
+
+    setSaving(true);
+    try {
+      const result = await createAppointment({
+        organizationId,
+        clientId: selectedClientId,
+        serviceId: selectedServiceId,
+        dateTime: fullDateTime,
+        // No futuro: passar packageId, se for um pacote real selecionado
+      });
+
+      if (!result.success) {
+        toast.error(result.error || "Erro ao salvar agendamento.");
+        return;
+      }
+
+      const count = result.appointments.length;
+      toast.success(
+        count > 1
+          ? `${count} sessões foram agendadas com sucesso!`
+          : "Agendamento criado com sucesso!",
+      );
+
+      onOpenChange(false);
+      // Notifica o pai para recarregar a agenda do dia
+      onCreated?.();
+    } catch (error) {
+      console.error("Erro ao salvar agendamento:", error);
+      toast.error("Erro inesperado ao salvar agendamento.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -79,14 +222,26 @@ export function NewAppointmentModal({
           {/* Seleção de Cliente */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="client">Cliente</Label>
-            <Select>
+            <Select
+              disabled={loadingOptions}
+              value={selectedClientId}
+              onValueChange={setSelectedClientId}
+            >
               <SelectTrigger id="client" className="bg-background">
-                <SelectValue placeholder="Selecione a cliente..." />
+                <SelectValue
+                  placeholder={
+                    loadingOptions
+                      ? "Carregando clientes..."
+                      : "Selecione a cliente..."
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="leda">Leda Paula</SelectItem>
-                <SelectItem value="mariana">Mariana Costa</SelectItem>
-                <SelectItem value="camila">Camila Silva</SelectItem>
+                {clients.map((client) => (
+                  <SelectItem key={client.id} value={client.id}>
+                    {client.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -94,14 +249,26 @@ export function NewAppointmentModal({
           {/* Seleção de Serviço */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="service">Serviço ou Pacote</Label>
-            <Select>
+            <Select
+              disabled={loadingOptions}
+              value={selectedServiceId}
+              onValueChange={setSelectedServiceId}
+            >
               <SelectTrigger id="service" className="bg-background">
-                <SelectValue placeholder="Selecione o serviço..." />
+                <SelectValue
+                  placeholder={
+                    loadingOptions
+                      ? "Carregando serviços..."
+                      : "Selecione o serviço..."
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="drenagem">Drenagem Linfática</SelectItem>
-                <SelectItem value="relaxante">Massagem Relaxante</SelectItem>
-                <SelectItem value="combo">Projeto Verão (Combo)</SelectItem>
+                {services.map((service) => (
+                  <SelectItem key={service.id} value={service.id}>
+                    {service.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -139,15 +306,15 @@ export function NewAppointmentModal({
             {/* TimePicker Customizado */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="time">Horário</Label>
-              <Select>
+              <Select value={time} onValueChange={setTime}>
                 <SelectTrigger id="time" className="bg-background">
                   <Clock className="mr-2 h-4 w-4 opacity-50 shrink-0" />
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
                 <SelectContent className="max-h-50">
-                  {TIME_SLOTS.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
+                  {TIME_SLOTS.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -184,13 +351,12 @@ export function NewAppointmentModal({
               <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
             </div>
 
-            {/* Input Numérico Customizado (Sem setas padrão) */}
+            {/* Input Numérico Customizado */}
             {isRecurring && (
               <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 pt-2 border-t border-border/50 mt-1">
                 <div className="flex items-center justify-between">
                   <Label>Quantidade de sessões</Label>
 
-                  {/* Controlador Numérico Minimalista */}
                   <div className="flex items-center gap-1 bg-background border border-border/50 rounded-lg p-0.5 shadow-sm">
                     <Button
                       variant="ghost"
@@ -201,7 +367,6 @@ export function NewAppointmentModal({
                       <Minus className="h-3 w-3" />
                     </Button>
 
-                    {/* Oculta as setas nativas via Tailwind no Chrome/Safari e Firefox */}
                     <Input
                       value={sessions}
                       onChange={(e) => setSessions(Number(e.target.value))}
@@ -230,11 +395,15 @@ export function NewAppointmentModal({
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={saving}
+          >
             Cancelar
           </Button>
-          <Button onClick={() => onOpenChange(false)} className="shadow-sm">
-            Salvar Agendamento
+          <Button onClick={handleSave} className="shadow-sm" disabled={saving}>
+            {saving ? "Salvando..." : "Salvar Agendamento"}
           </Button>
         </DialogFooter>
       </DialogContent>
