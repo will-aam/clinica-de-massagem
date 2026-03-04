@@ -313,21 +313,24 @@ model ServiceDuration {
   @@map("service_durations")
 }
 model CheckIn {
-  id             String       @id @default(cuid())
-  date_time      DateTime     @default(now())
-  
+  id         String   @id @default(cuid())
+  date_time  DateTime @default(now())
+
+  // Pode ou não estar ligado a um agendamento
   appointment_id String?      @unique
   appointment    Appointment? @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
-  
-  client_id      String
-  client         Client       @relation(fields: [client_id], references: [id], onDelete: Cascade)
-  
-  package_id     String
-  package        Package      @relation(fields: [package_id], references: [id], onDelete: Cascade)
-  
+
+  // Podem ser preenchidos depois
+  client_id  String?
+  client     Client?  @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  package_id String?
+  package    Package? @relation(fields: [package_id], references: [id], onDelete: Cascade)
+
+  // Sempre sabemos a qual organização pertence este check-in
   organization_id String
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  
+
   @@index([organization_id, date_time])
   @@map("check_ins")
 }
