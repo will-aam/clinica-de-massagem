@@ -6,16 +6,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 // --- CONFIGURAÇÕES DA NOSSA GRADE ---
-const START_HOUR = 8; // Começa às 08:00
-const END_HOUR = 19; // Termina às 19:00
+const DEFAULT_START_HOUR = 8; // 08:00
+const DEFAULT_END_HOUR = 19; // 19:00
 const HOUR_HEIGHT = 96; // h-24 no tailwind
 
-const HOURS = Array.from(
-  { length: END_HOUR - START_HOUR + 1 },
-  (_, i) => i + START_HOUR,
-);
-
-// Interface para o TypeScript saber o que é um Agendamento
 export interface Appointment {
   id: string;
   time: string;
@@ -32,17 +26,26 @@ export interface Appointment {
 interface DailyAgendaGridProps {
   appointments: Appointment[];
   onAppointmentClick: (appointment: Appointment) => void;
+  startHour?: number;
+  endHour?: number;
 }
 
 export function DailyAgendaGrid({
   appointments,
   onAppointmentClick,
+  startHour = DEFAULT_START_HOUR,
+  endHour = DEFAULT_END_HOUR,
 }: DailyAgendaGridProps) {
+  const HOURS = Array.from(
+    { length: endHour - startHour + 1 },
+    (_, i) => i + startHour,
+  );
+
   // Calcula a posição do bloco na tela (Top e Height)
   const calculatePosition = (timeStr: string, durationMinutes: number) => {
     const [hours, minutes] = timeStr.split(":").map(Number);
     const timeInMinutes = hours * 60 + minutes;
-    const startOffsetMinutes = START_HOUR * 60;
+    const startOffsetMinutes = startHour * 60;
 
     const top = ((timeInMinutes - startOffsetMinutes) / 60) * HOUR_HEIGHT;
     const height = (durationMinutes / 60) * HOUR_HEIGHT;
@@ -55,7 +58,10 @@ export function DailyAgendaGrid({
     const [h, m] = start.split(":").map(Number);
     const date = new Date();
     date.setHours(h, m + duration);
-    return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+    return `${date.getHours().toString().padStart(2, "0")}:${date
+      .getMinutes()
+      .toString()
+      .padStart(2, "0")}`;
   };
 
   // Botão rápido do WhatsApp direto no card

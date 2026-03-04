@@ -43,19 +43,12 @@ import { createAppointment } from "@/app/actions/appointments";
 interface NewAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /**
-   * Organização atual do Admin (id da Organization).
-   * Idealmente vem da sessão/autenticação.
-   */
   organizationId: string;
-  /**
-   * Callback opcional para o pai recarregar a agenda
-   * depois de salvar um agendamento novo.
-   */
   onCreated?: () => void;
+  openingTime?: string; // "08:00"
+  closingTime?: string; // "19:00"
 }
 
-// Tipos simples para listar clientes e serviços
 type ClientOption = {
   id: string;
   name: string;
@@ -66,18 +59,35 @@ type ServiceOption = {
   name: string;
 };
 
-// Gera os horários de 30 em 30 minutos (08:00 até 19:00)
-const TIME_SLOTS = Array.from({ length: 23 }, (_, i) => {
-  const hour = Math.floor(i / 2) + 8;
-  const minute = i % 2 === 0 ? "00" : "30";
-  return `${hour.toString().padStart(2, "0")}:${minute}`;
-});
+// Gera slots de 30 em 30 minutos entre openingTime e closingTime
+function generateTimeSlots(openingTime: string, closingTime: string) {
+  const [openH, openM] = openingTime.split(":").map(Number);
+  const [closeH, closeM] = closingTime.split(":").map(Number);
+
+  const slots: string[] = [];
+  const current = new Date();
+  current.setHours(openH, openM, 0, 0);
+
+  const end = new Date();
+  end.setHours(closeH, closeM, 0, 0);
+
+  while (current <= end) {
+    const h = String(current.getHours()).padStart(2, "0");
+    const m = String(current.getMinutes()).padStart(2, "0");
+    slots.push(`${h}:${m}`);
+    current.setMinutes(current.getMinutes() + 30);
+  }
+
+  return slots;
+}
 
 export function NewAppointmentModal({
   open,
   onOpenChange,
   organizationId,
   onCreated,
+  openingTime = "08:00",
+  closingTime = "19:00",
 }: NewAppointmentModalProps) {
   const [isRecurring, setIsRecurring] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -95,6 +105,8 @@ export function NewAppointmentModal({
 
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const TIME_SLOTS = generateTimeSlots(openingTime, closingTime);
 
   const incrementSessions = () => setSessions((prev) => prev + 1);
   const decrementSessions = () =>
@@ -167,7 +179,6 @@ export function NewAppointmentModal({
       return;
     }
 
-    // Monta o DateTime combinando data + horário
     const [hourStr, minuteStr] = time.split(":");
     const fullDateTime = new Date(date);
     fullDateTime.setHours(Number(hourStr), Number(minuteStr), 0, 0);
@@ -179,7 +190,6 @@ export function NewAppointmentModal({
         clientId: selectedClientId,
         serviceId: selectedServiceId,
         dateTime: fullDateTime,
-        // No futuro: passar packageId, se for um pacote real selecionado
       });
 
       if (!result.success) {
@@ -195,7 +205,6 @@ export function NewAppointmentModal({
       );
 
       onOpenChange(false);
-      // Notifica o pai para recarregar a agenda do dia
       onCreated?.();
     } catch (error) {
       console.error("Erro ao salvar agendamento:", error);
@@ -273,9 +282,8 @@ export function NewAppointmentModal({
             </Select>
           </div>
 
-          {/* Data e Hora (Componentes Customizados) */}
+          {/* Data e Hora */}
           <div className="grid grid-cols-2 gap-4">
-            {/* DatePicker Customizado */}
             <div className="flex flex-col gap-2">
               <Label>Data da 1ª Sessão</Label>
               <Popover>
@@ -303,7 +311,6 @@ export function NewAppointmentModal({
               </Popover>
             </div>
 
-            {/* TimePicker Customizado */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="time">Horário</Label>
               <Select value={time} onValueChange={setTime}>
@@ -324,7 +331,7 @@ export function NewAppointmentModal({
 
           <div className="h-px bg-border/50 my-1" />
 
-          {/* A Mágica da Recorrência */}
+          {/* Recorrência (ainda visual, futura ligação com pacotes) */}
           <div className="flex flex-col gap-4 bg-muted/30 p-3.5 rounded-xl border border-border/50 transition-all">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">
@@ -351,7 +358,6 @@ export function NewAppointmentModal({
               <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
             </div>
 
-            {/* Input Numérico Customizado */}
             {isRecurring && (
               <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-top-2 pt-2 border-t border-border/50 mt-1">
                 <div className="flex items-center justify-between">

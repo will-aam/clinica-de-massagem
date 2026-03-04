@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Plus,
   Calendar as CalendarIcon,
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ import {
 } from "@/components/agenda/daily-agenda-grid";
 import { NewAppointmentModal } from "@/components/agenda/new-appointment-modal";
 import { AppointmentDetailsModal } from "@/components/agenda/appointment-details-modal";
+import { ScheduleSettingsModal } from "@/components/agenda/schedule-settings-modal";
 
 export default function AgendaPage() {
   // Estado da data SELECIONADA (aquela que mostra a grade)
@@ -41,6 +43,7 @@ export default function AgendaPage() {
 
   // Controles dos Modais
   const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] =
     useState<Appointment | null>(null);
 
@@ -48,21 +51,26 @@ export default function AgendaPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
 
+  // Horário configurado da agenda (estado local por enquanto)
+  const [openingTime, setOpeningTime] = useState("08:00");
+  const [closingTime, setClosingTime] = useState("19:00");
+
   // TODO FUTURO:
   // Pegar o organizationId a partir da sessão do admin logado
   // ou a partir de um contexto global da clínica selecionada.
-  // Por enquanto, para testes, você pode colocar o ID fixo de uma Organization.
-  const organizationId = "cmm9qg8yj0003cg1ol9a8n9l5"; // <- preencha com o ID da sua Organization para testar
+  const organizationId = "cmm9qg8yj0003cg1ol9a8n9l5";
+
+  // Helpers para converter "08:00" -> 8
+  const openingHourNumber = Number(openingTime.split(":")[0]) || 8;
+  const closingHourNumber = Number(closingTime.split(":")[0]) || 19;
 
   // Formatação Responsiva do Dia
-  // Desktop: "Sábado, 28 Fev"
   const formattedDateDesktop = format(selectedDate, "EEEE, dd MMM", {
     locale: ptBR,
   })
     .replace(/^\w/, (c) => c.toUpperCase())
     .replace("-feira", "");
 
-  // Mobile: "Sáb, 28 Fev"
   const formattedDateMobile = format(selectedDate, "EEE, dd MMM", {
     locale: ptBR,
   })
@@ -80,7 +88,6 @@ export default function AgendaPage() {
   useEffect(() => {
     async function loadAppointments() {
       if (!organizationId) {
-        // Enquanto não tivermos org definida, não chama a API
         setAppointments([]);
         return;
       }
@@ -126,7 +133,6 @@ export default function AgendaPage() {
                   <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 <div className="text-left">
-                  {/* Troca o texto dinamicamente dependendo do tamanho da tela */}
                   <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground leading-tight flex items-center gap-2">
                     <span className="hidden sm:inline-block">
                       {formattedDateDesktop}
@@ -138,6 +144,9 @@ export default function AgendaPage() {
                     {loadingAppointments
                       ? "Carregando agendamentos..."
                       : `Você tem ${appointments.length} agendamentos.`}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground/80 mt-0.5">
+                    Funcionamento: {openingTime} às {closingTime}
                   </p>
                 </div>
               </div>
@@ -161,9 +170,9 @@ export default function AgendaPage() {
             </PopoverContent>
           </Popover>
 
-          {/* LADO DIREITO: Tira da Semana (Week Strip) e Botão Novo */}
+          {/* LADO DIREITO: Tira da Semana (Week Strip), Botão Configurar e Novo */}
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-            {/* Tira da Semana Arrastável (Abreviada e Otimizada) */}
+            {/* Tira da Semana */}
             <div className="flex items-center w-full sm:w-auto justify-between sm:justify-center bg-muted/20 sm:bg-transparent rounded-2xl sm:rounded-none p-1 sm:p-0 border sm:border-0 border-border/50">
               <Button
                 variant="ghost"
@@ -179,7 +188,6 @@ export default function AgendaPage() {
                   const isSelected = isSameDay(day, selectedDate);
                   const isToday = isSameDay(day, new Date());
 
-                  // Força apenas 3 letras (DOM, SEG, TER) e retira pontuações
                   const shortDayName = format(day, "EEE", { locale: ptBR })
                     .substring(0, 3)
                     .replace(".", "");
@@ -225,6 +233,17 @@ export default function AgendaPage() {
               </Button>
             </div>
 
+            {/* BOTÃO CONFIGURAR HORÁRIO (ícone apenas) */}
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl sm:rounded-full shadow-sm shrink-0 h-12 sm:h-10"
+              onClick={() => setIsSettingsOpen(true)}
+              title="Configurar horário da agenda"
+            >
+              <Settings2 className="h-4 w-4" />
+            </Button>
+
             {/* BOTÃO NOVO */}
             <Button
               className="rounded-xl sm:rounded-full shadow-sm shrink-0 w-full sm:w-auto h-12 sm:h-10 font-semibold"
@@ -240,28 +259,45 @@ export default function AgendaPage() {
         <DailyAgendaGrid
           appointments={appointments}
           onAppointmentClick={(appt) => setSelectedAppointment(appt)}
+          startHour={openingHourNumber}
+          endHour={closingHourNumber}
         />
       </div>
 
-      {/* --- OS MODAIS --- */}
+      {/* --- MODAL: NOVO AGENDAMENTO --- */}
       <NewAppointmentModal
         open={isNewModalOpen}
         onOpenChange={setIsNewModalOpen}
         organizationId={organizationId}
+        openingTime={openingTime}
+        closingTime={closingTime}
         onCreated={() => {
           // força recarregar os agendamentos do dia atual
-          // basta alterar o selectedDate para o mesmo valor,
-          // o useEffect vai rodar de novo
           setSelectedDate((d) => new Date(d));
         }}
       />
 
+      {/* --- MODAL: DETALHES DO AGENDAMENTO --- */}
       <AppointmentDetailsModal
         open={!!selectedAppointment}
         onOpenChange={(open) => {
           if (!open) setSelectedAppointment(null);
         }}
         appointment={selectedAppointment}
+      />
+
+      {/* --- MODAL: CONFIGURAÇÃO DE HORÁRIO --- */}
+      <ScheduleSettingsModal
+        open={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        initialSettings={{
+          openingTime,
+          closingTime,
+        }}
+        onSave={({ openingTime: newOpening, closingTime: newClosing }) => {
+          setOpeningTime(newOpening);
+          setClosingTime(newClosing);
+        }}
       />
     </>
   );

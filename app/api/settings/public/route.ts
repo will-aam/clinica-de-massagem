@@ -1,34 +1,54 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Busca configurações públicas (sem autenticação)
-export async function GET() {
+/**
+ * Retorna configurações públicas da clínica (Settings),
+ * incluindo nome fantasia e horários de funcionamento.
+ *
+ * GET /api/settings/public?organizationId=ORG_ID
+ */
+export async function GET(req: NextRequest) {
   try {
-    // 🔥 Busca a primeira organização do sistema
-    const organization = await prisma.organization.findFirst({
-      include: {
-        settings: true,
-      },
-    });
+    const { searchParams } = new URL(req.url);
+    const organizationId = searchParams.get("organizationId");
 
-    if (!organization) {
+    if (!organizationId) {
       return NextResponse.json(
-        { error: "Sistema não configurado" },
-        { status: 500 },
+        { error: "organizationId é obrigatório." },
+        { status: 400 },
       );
     }
 
-    // Retorna apenas dados públicos (não sensíveis)
-    const publicData = {
-      tradeName:
-        organization.settings?.trade_name || organization.name || "Totten",
-      companyName: organization.settings?.company_name || organization.name,
-      phone: organization.settings?.phone_whatsapp || "",
-    };
+    const settings = await prisma.settings.findUnique({
+      where: {
+        organization_id: organizationId,
+      },
+      select: {
+        company_name: true,
+        trade_name: true,
+        opening_time: true,
+        closing_time: true,
+      },
+    });
 
-    return NextResponse.json(publicData);
+    if (!settings) {
+      return NextResponse.json(
+        { error: "Configurações não encontradas para essa organização." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      companyName: settings.company_name,
+      tradeName: settings.trade_name,
+      openingTime: settings.opening_time,
+      closingTime: settings.closing_time,
+    });
   } catch (error) {
-    console.error("Erro ao buscar configurações públicas:", error);
-    return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
+    console.error("[GET /api/settings/public] ERRO:", error);
+    return NextResponse.json(
+      { error: "Erro ao carregar configurações públicas." },
+      { status: 500 },
+    );
   }
 }
