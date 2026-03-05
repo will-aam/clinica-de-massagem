@@ -82,6 +82,21 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
   }, []);
 
   const handleSave = async () => {
+    const cleanPhone = editPhone.replace(/\D/g, "");
+    const isPhoneValid = cleanPhone.length === 10 || cleanPhone.length === 11;
+    const isEmailValid =
+      !editEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail);
+
+    if (!isPhoneValid) {
+      toast.error("Telefone inválido. Informe DDD + número.");
+      return;
+    }
+
+    if (!isEmailValid) {
+      toast.error("E-mail inválido.");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/clients/${client.id}`, {
