@@ -1,8 +1,6 @@
-"use client";
-
-import useSWR from "swr";
 import Link from "next/link";
 import { AlertCircle, User, CalendarPlus } from "lucide-react";
+import useSWR from "swr";
 import {
   Card,
   CardContent,
@@ -21,10 +19,6 @@ type PendingCheckIn = {
   clientName: string;
   dateTime: string;
 };
-
-interface PendingCheckInsCardProps {
-  organizationId: string;
-}
 
 function PendingCheckInItem({ checkIn }: { checkIn: PendingCheckIn }) {
   const date = new Date(checkIn.dateTime);
@@ -64,7 +58,7 @@ function PendingCheckInItem({ checkIn }: { checkIn: PendingCheckIn }) {
           </Button>
         )}
         <Button variant="outline" size="sm" asChild className="h-8 px-2">
-          <Link href="/admin/agenda">
+          <Link href={`/admin/checkins/pending/${checkIn.id}`}>
             <CalendarPlus className="h-4 w-4 mr-1" />
             <span className="hidden sm:inline">Associar</span>
           </Link>
@@ -74,12 +68,10 @@ function PendingCheckInItem({ checkIn }: { checkIn: PendingCheckIn }) {
   );
 }
 
-export function PendingCheckInsCard({ organizationId }: PendingCheckInsCardProps) {
-  const { data, isLoading } = useSWR(
-    `/api/admin/checkins/pending?organizationId=${organizationId}`,
-    fetcher,
-    { refreshInterval: 30000 },
-  );
+export function PendingCheckInsCard() {
+  const { data, isLoading } = useSWR(`/api/admin/checkins/pending`, fetcher, {
+    refreshInterval: 30000,
+  });
 
   const pendingCheckIns: PendingCheckIn[] = data?.pendingCheckIns ?? [];
 
@@ -89,35 +81,23 @@ export function PendingCheckInsCard({ organizationId }: PendingCheckInsCardProps
 
   return (
     <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-900/50 dark:bg-amber-950/20 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
           <AlertCircle className="h-5 w-5" />
-          Check-ins sem serviço vinculado
-          {!isLoading && pendingCheckIns.length > 0 && (
-            <span className="ml-auto text-xs font-semibold bg-amber-200 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 px-2 py-0.5 rounded-full">
-              {pendingCheckIns.length}
-            </span>
-          )}
+          Check-ins Pendentes
         </CardTitle>
         <CardDescription>
-          Clientes que fizeram check-in pelo Totem sem agendamento vinculado
+          Clientes que fizeram check-in sem agendamento.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pb-4">
+      <CardContent>
         {isLoading ? (
-          <div className="flex flex-col gap-4">
-            {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4">
-                <Skeleton className="h-10 w-10 rounded-full shrink-0" />
-                <div className="flex flex-col gap-2 w-full">
-                  <Skeleton className="h-4 w-32" />
-                  <Skeleton className="h-3 w-44" />
-                </div>
-              </div>
-            ))}
+          <div className="space-y-3">
+            <Skeleton className="h-12 rounded-lg" />
+            <Skeleton className="h-12 rounded-lg" />
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="divide-y divide-border/50">
             {pendingCheckIns.map((checkIn) => (
               <PendingCheckInItem key={checkIn.id} checkIn={checkIn} />
             ))}

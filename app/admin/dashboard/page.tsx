@@ -219,10 +219,7 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        {/* Check-ins Pendentes de Vinculação */}
-        {data?.organizationId && (
-          <PendingCheckInsCard organizationId={data.organizationId} />
-        )}
+        <PendingCheckInsCard />
 
         {/* Check-ins Recentes */}
         <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card mt-2 md:mt-0">

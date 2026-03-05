@@ -1,10 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 /**
- * Lista serviços de uma organização.
+ * Lista serviços da organização do admin logado.
  *
- * GET /api/admin/services?organizationId=ORG_ID
+ * GET /api/admin/services
  *
  * Resposta:
  * {
@@ -14,21 +15,13 @@ import { prisma } from "@/lib/prisma";
  *   ]
  * }
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId é obrigatório." },
-        { status: 400 },
-      );
-    }
+    const admin = await requireAuth();
 
     const services = await prisma.service.findMany({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
       },
       select: {
         id: true,
@@ -42,6 +35,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ services });
   } catch (error) {
     console.error("[GET /api/admin/services] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao listar serviços." },
       { status: 500 },

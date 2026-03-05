@@ -1,41 +1,15 @@
-// Rota da API Admin: GET /api/admin/checkins/pending
-//
-// Lista check-ins avulsos (sem agendamento vinculado) de uma organização,
-// para que o admin possa tomar alguma ação (ex: associar a um agendamento).
-//
-// Contrato:
-//   - Query params: organizationId (obrigatório)
-//   - Resposta:
-//     {
-//       "pendingCheckIns": [
-//         {
-//           "id": "...",
-//           "clientId": "...",
-//           "clientName": "...",
-//           "dateTime": "..."
-//         }
-//       ]
-//     }
-
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId é obrigatório." },
-        { status: 400 },
-      );
-    }
+    const admin = await requireAuth();
 
     // Busca check-ins sem appointment vinculado (check-ins avulsos)
     const pendingCheckIns = await prisma.checkIn.findMany({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
         appointment_id: null,
       },
       include: {
@@ -61,6 +35,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ pendingCheckIns: mapped });
   } catch (error) {
     console.error("[GET /api/admin/checkins/pending] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao listar check-ins pendentes." },
       { status: 500 },
