@@ -198,7 +198,7 @@ export function AdminSidebar() {
 
         <SidebarGroup className="mt-4">
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
-            Módulos Extras
+            Módulos
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>

@@ -1,3 +1,4 @@
+// app/api/admin/agenda/day/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
