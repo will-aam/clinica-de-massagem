@@ -1,34 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 /**
- * Lista clientes de uma organização.
+ * Lista clientes da organização do admin logado.
  *
- * GET /api/admin/clients?organizationId=ORG_ID
- *
- * Resposta:
- * {
- *   "clients": [
- *     { "id": "cl_1", "name": "Maria Silva" },
- *     { "id": "cl_2", "name": "João Souza" }
- *   ]
- * }
+ * GET /api/admin/clients
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId é obrigatório." },
-        { status: 400 },
-      );
-    }
+    const admin = await requireAuth();
 
     const clients = await prisma.client.findMany({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
       },
       select: {
         id: true,
@@ -42,6 +27,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ clients });
   } catch (error) {
     console.error("[GET /api/admin/clients] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao listar clientes." },
       { status: 500 },

@@ -18,7 +18,20 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Clock } from "lucide-react";
+import { Clock, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type ScheduleSettings = {
   openingTime: string; // "08:00"
@@ -30,6 +43,7 @@ interface ScheduleSettingsModalProps {
   onOpenChange: (open: boolean) => void;
   initialSettings: ScheduleSettings;
   onSave: (settings: ScheduleSettings) => void;
+  onClearToday?: (deletedCount: number) => void;
 }
 
 // Gera slots de hora cheia: 00:00, 01:00, ..., 23:00
@@ -43,17 +57,21 @@ export function ScheduleSettingsModal({
   onOpenChange,
   initialSettings,
   onSave,
+  onClearToday,
 }: ScheduleSettingsModalProps) {
   const [openingTime, setOpeningTime] = useState(initialSettings.openingTime);
   const [closingTime, setClosingTime] = useState(initialSettings.closingTime);
 
-  // Sempre que o modal abrir, sincroniza com o valor vindo do pai
+  const [clearPassword, setClearPassword] = useState("");
+  const [isClearing, setIsClearing] = useState(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
+
   useEffect(() => {
-    if (open) {
-      setOpeningTime(initialSettings.openingTime);
-      setClosingTime(initialSettings.closingTime);
+    if (!open) {
+      setClearPassword("");
+      setIsClearDialogOpen(false);
     }
-  }, [open, initialSettings.openingTime, initialSettings.closingTime]);
+  }, [open]);
 
   const handleConfirm = () => {
     // Garantia simples: não deixar fechamento antes da abertura
@@ -65,6 +83,37 @@ export function ScheduleSettingsModal({
 
     onSave({ openingTime, closingTime });
     onOpenChange(false);
+  };
+
+  const handleClearToday = async () => {
+    if (!clearPassword) {
+      toast.error("Digite sua senha para confirmar.");
+      return;
+    }
+
+    setIsClearing(true);
+    try {
+      const res = await fetch("/api/admin/agenda/clear-today", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: clearPassword }),
+      });
+
+      if (!res.ok) {
+        const payload = await res.json();
+        throw new Error(payload?.error || "Erro ao limpar agenda.");
+      }
+
+      const data = await res.json();
+      toast.success(`Agenda de hoje limpa (${data.deleted ?? 0}).`);
+      setClearPassword("");
+      setIsClearDialogOpen(false);
+      onClearToday?.(data.deleted ?? 0);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Erro ao limpar.");
+    } finally {
+      setIsClearing(false);
+    }
   };
 
   return (
@@ -114,24 +163,74 @@ export function ScheduleSettingsModal({
               </SelectContent>
             </Select>
           </div>
+
+          {/* Ação destrutiva */}
+          <div className="rounded-md border border-destructive/20 bg-destructive/5 p-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-destructive">
+                  Limpar agenda de hoje
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Remove todos os agendamentos de hoje (com confirmação).
+                </p>
+              </div>
+
+              <AlertDialog
+                open={isClearDialogOpen}
+                onOpenChange={setIsClearDialogOpen}
+              >
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="whitespace-nowrap"
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Limpar
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Confirmar limpeza</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Digite sua senha para limpar todos os agendamentos de
+                      hoje.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+
+                  <div className="mt-3">
+                    <Label>Senha do administrador</Label>
+                    <Input
+                      type="password"
+                      value={clearPassword}
+                      onChange={(e) => setClearPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleClearToday}
+                      disabled={isClearing}
+                      className="bg-destructive text-white"
+                    >
+                      {isClearing ? "Limpando..." : "Confirmar"}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          </div>
         </div>
 
-        <DialogFooter
-          className="
-            flex flex-col-reverse gap-2
-            sm:flex-row sm:justify-end sm:gap-3
-          "
-        >
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="w-full sm:w-auto"
-          >
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleConfirm} className="w-full sm:w-auto">
-            Salvar
-          </Button>
+          <Button onClick={handleConfirm}>Salvar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

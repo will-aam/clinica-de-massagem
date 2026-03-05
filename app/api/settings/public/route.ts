@@ -1,27 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 /**
  * Retorna configurações públicas da clínica (Settings),
  * incluindo nome fantasia e horários de funcionamento.
  *
- * GET /api/settings/public?organizationId=ORG_ID
+ * GET /api/settings/public
  */
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(req.url);
-    const organizationId = searchParams.get("organizationId");
-
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId é obrigatório." },
-        { status: 400 },
-      );
-    }
+    const admin = await requireAuth();
 
     const settings = await prisma.settings.findUnique({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
       },
       select: {
         company_name: true,
@@ -46,6 +39,11 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[GET /api/settings/public] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao carregar configurações públicas." },
       { status: 500 },

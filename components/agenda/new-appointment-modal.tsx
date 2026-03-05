@@ -43,7 +43,6 @@ import { createAppointment } from "@/app/actions/appointments";
 interface NewAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
   onCreated?: () => void;
   openingTime?: string; // "08:00"
   closingTime?: string; // "19:00"
@@ -84,7 +83,6 @@ function generateTimeSlots(openingTime: string, closingTime: string) {
 export function NewAppointmentModal({
   open,
   onOpenChange,
-  organizationId,
   onCreated,
   openingTime = "08:00",
   closingTime = "19:00",
@@ -115,13 +113,13 @@ export function NewAppointmentModal({
   // Carrega lista básica de clientes e serviços da organização
   useEffect(() => {
     async function loadOptions() {
-      if (!open || !organizationId) return;
+      if (!open) return;
 
       setLoadingOptions(true);
       try {
         const [clientsRes, servicesRes] = await Promise.all([
-          fetch(`/api/admin/clients?organizationId=${organizationId}`),
-          fetch(`/api/admin/services?organizationId=${organizationId}`),
+          fetch("/api/admin/clients"),
+          fetch("/api/admin/services"),
         ]);
 
         if (clientsRes.ok) {
@@ -155,13 +153,9 @@ export function NewAppointmentModal({
     }
 
     loadOptions();
-  }, [open, organizationId]);
+  }, [open]);
 
   const handleSave = async () => {
-    if (!organizationId) {
-      toast.error("Organização não definida.");
-      return;
-    }
     if (!selectedClientId) {
       toast.error("Selecione uma cliente.");
       return;
@@ -186,7 +180,6 @@ export function NewAppointmentModal({
     setSaving(true);
     try {
       const result = await createAppointment({
-        organizationId,
         clientId: selectedClientId,
         serviceId: selectedServiceId,
         dateTime: fullDateTime,

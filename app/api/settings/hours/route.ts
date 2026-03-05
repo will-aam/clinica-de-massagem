@@ -1,33 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth";
 
 /**
  * Atualiza os horários de funcionamento (opening_time, closing_time)
- * da organização nas Settings.
+ * da organização do admin logado.
  *
  * POST /api/settings/hours
  * Body:
  * {
- *   "organizationId": "ORG_ID",
  *   "openingTime": "08:00",
  *   "closingTime": "19:00"
  * }
  */
 export async function POST(req: NextRequest) {
   try {
+    const admin = await requireAuth();
     const body = await req.json().catch(() => null);
 
     if (!body) {
       return NextResponse.json({ error: "Body inválido." }, { status: 400 });
     }
 
-    const { organizationId, openingTime, closingTime } = body;
+    const { openingTime, closingTime } = body;
 
-    if (!organizationId || !openingTime || !closingTime) {
+    if (!openingTime || !closingTime) {
       return NextResponse.json(
         {
-          error:
-            "Parâmetros obrigatórios: organizationId, openingTime, closingTime.",
+          error: "Parâmetros obrigatórios: openingTime, closingTime.",
         },
         { status: 400 },
       );
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
     const updated = await prisma.settings.update({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
       },
       data: {
         opening_time: openingTime,
@@ -63,6 +63,11 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     console.error("[POST /api/settings/hours] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao atualizar horários de funcionamento." },
       { status: 500 },

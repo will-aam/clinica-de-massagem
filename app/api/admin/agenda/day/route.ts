@@ -1,56 +1,19 @@
-// app/api/admin/agenda/day/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { startOfDay, endOfDay } from "date-fns";
+import { requireAuth } from "@/lib/auth";
 
 /**
- * TODO FUTURO:
- * Em vez de pegar o organizationId pela query string,
- * podemos pegar pela sessão do admin logado (NextAuth),
- * ou pelo contexto da organização selecionada.
- */
-async function getOrganizationIdFromRequest(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
-  const organizationId = searchParams.get("organizationId");
-  if (!organizationId) return null;
-  return organizationId;
-}
-
-/**
- * Lista agendamentos de um dia específico para a organização.
+ * Lista agendamentos de um dia específico para a organização do admin logado.
  *
- * GET /api/admin/agenda/day?date=2026-03-04&organizationId=ORG_ID
- *
- * Resposta:
- * {
- *   "appointments": [
- *     {
- *       "id": "...",
- *       "time": "14:00",
- *       "duration": 60,
- *       "clientName": "Maria",
- *       "service": "Drenagem",
- *       "sessionInfo": "Sessão 1 de 10" | "Avulsa",
- *       "isRecurring": true | false,
- *       "phone": "5579999...",
- *       "color": "bg-emerald-100 border-emerald-300 text-emerald-900",
- *       "hasCharge": true | false
- *     }
- *   ]
- * }
+ * GET /api/admin/agenda/day?date=2026-03-04
  */
 export async function GET(req: NextRequest) {
   try {
+    const admin = await requireAuth();
+
     const { searchParams } = new URL(req.url);
     const dateParam = searchParams.get("date");
-
-    const organizationId = await getOrganizationIdFromRequest(req);
-    if (!organizationId) {
-      return NextResponse.json(
-        { error: "organizationId obrigatório na query string." },
-        { status: 400 },
-      );
-    }
 
     if (!dateParam) {
       return NextResponse.json(
@@ -68,7 +31,7 @@ export async function GET(req: NextRequest) {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        organization_id: organizationId,
+        organization_id: admin.organizationId,
         date_time: {
           gte: from,
           lte: to,
@@ -132,6 +95,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ appointments: mapped });
   } catch (error) {
     console.error("[GET /api/admin/agenda/day] ERRO:", error);
+
+    if (error instanceof Error && error.message === "Unauthorized") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     return NextResponse.json(
       { error: "Erro ao carregar agenda do dia." },
       { status: 500 },

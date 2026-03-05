@@ -6,10 +6,10 @@
 
 import { prisma } from "@/lib/prisma";
 import { Appointment } from "@prisma/client";
+import { requireAuth } from "@/lib/auth";
 
 // Tipo de entrada para criar um agendamento
 export type CreateAppointmentInput = {
-  organizationId: string;
   clientId: string;
   serviceId: string;
   // Data/hora do primeiro agendamento (ou único, se avulso)
@@ -39,14 +39,9 @@ export async function createAppointment(
   input: CreateAppointmentInput,
 ): Promise<CreateAppointmentResult> {
   try {
-    const {
-      organizationId,
-      clientId,
-      serviceId,
-      dateTime,
-      observations,
-      packageId,
-    } = input;
+    const admin = await requireAuth();
+
+    const { clientId, serviceId, dateTime, observations, packageId } = input;
 
     // Converte para Date caso venha como string ISO
     const firstDateTime =
@@ -60,7 +55,7 @@ export async function createAppointment(
           observations,
           client_id: clientId,
           service_id: serviceId,
-          organization_id: organizationId,
+          organization_id: admin.organizationId,
           // status PENDENTE é o padrão do modelo
         },
       });
@@ -70,12 +65,11 @@ export async function createAppointment(
 
     // --- Caso 2: Agendamento vinculado a pacote ---
     // Busca o pacote para calcular a quantidade de sessões a agendar.
-    // Estratégia: X = total_sessions - used_sessions (sessões ainda não agendadas)
     const pkg = await prisma.package.findUnique({
       where: { id: packageId },
     });
 
-    if (!pkg) {
+    if (!pkg || pkg.organization_id !== admin.organizationId) {
       return { success: false, error: "Pacote não encontrado." };
     }
 
@@ -94,8 +88,6 @@ export async function createAppointment(
       const created: Appointment[] = [];
 
       for (let i = 0; i < sessionsToSchedule; i++) {
-        // Regra de data: cada sessão ocorre 7 dias após a anterior (mesmo horário).
-        // Sessão 1 = firstDateTime, Sessão 2 = firstDateTime + 7 dias, etc.
         const sessionDate = new Date(firstDateTime);
         sessionDate.setDate(sessionDate.getDate() + i * 7);
 
@@ -106,9 +98,8 @@ export async function createAppointment(
             client_id: clientId,
             service_id: serviceId,
             package_id: packageId,
-            organization_id: organizationId,
-            session_number: i + 1, // sequencial: 1, 2, 3, ..., X
-            // status PENDENTE é o padrão do modelo
+            organization_id: admin.organizationId,
+            session_number: i + 1,
           },
         });
 

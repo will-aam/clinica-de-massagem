@@ -1,7 +1,7 @@
 // app/admin/agenda/page.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { format, startOfWeek, addDays, subDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AdminHeader } from "@/components/admin-header";
@@ -32,10 +32,6 @@ import { AppointmentDetailsModal } from "@/components/agenda/appointment-details
 import { ScheduleSettingsModal } from "@/components/agenda/schedule-settings-modal";
 
 export default function AgendaPage() {
-  // TODO FUTURO:
-  // Pegar o organizationId a partir da sessão do admin logado
-  const organizationId = "cmm9qg8yj0003cg1ol9a8n9l5";
-
   // Estado da data SELECIONADA (aquela que mostra a grade)
   const [selectedDate, setSelectedDate] = useState(new Date());
 
@@ -86,13 +82,9 @@ export default function AgendaPage() {
   // Carrega horários de funcionamento a partir das Settings (Prisma)
   useEffect(() => {
     async function loadSettings() {
-      if (!organizationId) return;
-
       setLoadingSettings(true);
       try {
-        const res = await fetch(
-          `/api/settings/public?organizationId=${organizationId}`,
-        );
+        const res = await fetch("/api/settings/public");
 
         if (!res.ok) {
           console.error("Falha ao carregar configurações públicas");
@@ -110,41 +102,34 @@ export default function AgendaPage() {
     }
 
     loadSettings();
-  }, [organizationId]);
+  }, []);
 
-  // Carrega agendamentos sempre que a data mudar
-  useEffect(() => {
-    async function loadAppointments() {
-      if (!organizationId) {
+  const loadAppointments = useCallback(async (date: Date) => {
+    setLoadingAppointments(true);
+    try {
+      const dateStr = format(date, "yyyy-MM-dd");
+      const res = await fetch(`/api/admin/agenda/day?date=${dateStr}`);
+
+      if (!res.ok) {
+        console.error("Falha ao carregar agendamentos do dia");
         setAppointments([]);
         return;
       }
 
-      setLoadingAppointments(true);
-      try {
-        const dateStr = format(selectedDate, "yyyy-MM-dd");
-        const res = await fetch(
-          `/api/admin/agenda/day?date=${dateStr}&organizationId=${organizationId}`,
-        );
-
-        if (!res.ok) {
-          console.error("Falha ao carregar agendamentos do dia");
-          setAppointments([]);
-          return;
-        }
-
-        const data = await res.json();
-        setAppointments(data.appointments ?? []);
-      } catch (error) {
-        console.error("Erro ao carregar agendamentos:", error);
-        setAppointments([]);
-      } finally {
-        setLoadingAppointments(false);
-      }
+      const data = await res.json();
+      setAppointments(data.appointments ?? []);
+    } catch (error) {
+      console.error("Erro ao carregar agendamentos:", error);
+      setAppointments([]);
+    } finally {
+      setLoadingAppointments(false);
     }
+  }, []);
 
-    loadAppointments();
-  }, [selectedDate, organizationId]);
+  // Carrega agendamentos sempre que a data mudar
+  useEffect(() => {
+    loadAppointments(selectedDate);
+  }, [selectedDate, loadAppointments]);
 
   return (
     <>
@@ -298,7 +283,6 @@ export default function AgendaPage() {
       <NewAppointmentModal
         open={isNewModalOpen}
         onOpenChange={setIsNewModalOpen}
-        organizationId={organizationId}
         openingTime={openingTime}
         closingTime={closingTime}
         onCreated={() => {
@@ -340,7 +324,6 @@ export default function AgendaPage() {
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                organizationId,
                 openingTime: newOpening,
                 closingTime: newClosing,
               }),
@@ -348,11 +331,13 @@ export default function AgendaPage() {
 
             if (!res.ok) {
               console.error("Falha ao salvar horários no backend");
-              // Opcional: você pode mostrar um toast de erro aqui
             }
           } catch (error) {
             console.error("Erro ao salvar horários no backend:", error);
           }
+        }}
+        onClearToday={async () => {
+          await loadAppointments(selectedDate);
         }}
       />
     </>
