@@ -1,30 +1,34 @@
+// app/api/totem/search-client/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// GET - Busca cliente pelo CPF
+// GET - Busca cliente pelo CPF + organização
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const cpf = searchParams.get("cpf");
+    const slug = searchParams.get("slug");
 
-    if (!cpf) {
-      return NextResponse.json({ error: "CPF é obrigatório" }, { status: 400 });
-    }
-
-    // Remove pontuação do CPF
-    const cleanCpf = cpf.replace(/\D/g, "");
-
-    // 🔥 Busca a primeira (e única) organização do sistema
-    const organization = await prisma.organization.findFirst();
-
-    if (!organization) {
+    if (!cpf || !slug) {
       return NextResponse.json(
-        { error: "Sistema não configurado" },
-        { status: 500 },
+        { error: "CPF e slug são obrigatórios" },
+        { status: 400 },
       );
     }
 
-    // Busca o cliente
+    const cleanCpf = cpf.replace(/\D/g, "");
+
+    const organization = await prisma.organization.findUnique({
+      where: { slug },
+    });
+
+    if (!organization) {
+      return NextResponse.json(
+        { error: "Organização não encontrada" },
+        { status: 404 },
+      );
+    }
+
     const client = await prisma.client.findFirst({
       where: {
         cpf: cleanCpf,
@@ -56,7 +60,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Formata resposta
     const response = {
       id: client.id,
       name: client.name,

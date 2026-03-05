@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CpfKeypad } from "@/components/cpf-keypad";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -60,6 +60,12 @@ export default function TotemCheckInPage() {
   const organizationSlug =
     searchParams.get("slug") || searchParams.get("organization") || "";
 
+  useEffect(() => {
+    if (!organizationSlug) {
+      router.replace("/totem/error?type=ORG_NOT_FOUND");
+    }
+  }, [organizationSlug, router]);
+
   const handleConfirm = async () => {
     const digits = cpf.replace(/\D/g, "");
     if (digits.length !== 11) return;
@@ -83,7 +89,7 @@ export default function TotemCheckInPage() {
       const data: SearchResponse = await res.json();
 
       if (data.status === "NOT_FOUND") {
-        router.push("/totem/error?type=CPF_NOT_FOUND");
+        router.push(`/totem/error?type=CPF_NOT_FOUND&slug=${organizationSlug}`);
         return;
       }
 
@@ -98,6 +104,7 @@ export default function TotemCheckInPage() {
               minute: "2-digit",
             },
           ),
+          slug: organizationSlug,
         });
         router.push(`/totem/success?${params.toString()}`);
         return;
@@ -111,7 +118,7 @@ export default function TotemCheckInPage() {
       }
     } catch (error) {
       console.error("Erro ao buscar cliente:", error);
-      router.push("/totem/error?type=UNKNOWN");
+      router.push(`/totem/error?type=UNKNOWN&slug=${organizationSlug}`);
     } finally {
       setLoading(false);
     }
@@ -139,6 +146,7 @@ export default function TotemCheckInPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appointment_id: appt.id,
+          organizationSlug,
         }),
       });
 
@@ -149,14 +157,15 @@ export default function TotemCheckInPage() {
           name: data.clientName,
           service: data.serviceName,
           time: data.time,
+          slug: organizationSlug,
         });
         router.push(`/totem/success?${params.toString()}`);
       } else {
-        router.push("/totem/error?type=UNKNOWN");
+        router.push(`/totem/error?type=UNKNOWN&slug=${organizationSlug}`);
       }
     } catch (error) {
       console.error("Erro ao fazer check-in:", error);
-      router.push("/totem/error?type=UNKNOWN");
+      router.push(`/totem/error?type=UNKNOWN&slug=${organizationSlug}`);
     } finally {
       setCheckingIn(false);
     }

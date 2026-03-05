@@ -4,7 +4,7 @@
 //
 // Contrato:
 //   - Frontend envia: { cpf: string, organizationSlug: string }
-//   - Se existir agendamento hoje: realiza check-in e responde { status: "FOUND", appointment: { ... } }
+//   - Se existir agendamento hoje: responde { status: "FOUND", appointment: { ... } }
 //   - Se não existir: responde { status: "NOT_FOUND" }
 //   - Se existir mais de um: responde { status: "MULTIPLE_FOUND", appointments: [...] }
 
@@ -19,7 +19,6 @@ export async function POST(req: NextRequest) {
       organizationSlug?: string;
     };
 
-    // Validação básica dos campos obrigatórios
     if (!cpf || !organizationSlug) {
       return NextResponse.json(
         { error: "CPF e organizationSlug são obrigatórios." },
@@ -27,10 +26,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Remove pontuação do CPF para padronizar a busca
     const cpfLimpo = cpf.replace(/\D/g, "");
 
-    // 1. Identifica a organização pelo slug
     const organizacao = await prisma.organization.findUnique({
       where: { slug: organizationSlug },
     });
@@ -42,7 +39,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. Localiza o cliente pelo CPF dentro da organização
     const cliente = await prisma.client.findFirst({
       where: {
         cpf: cpfLimpo,
@@ -54,13 +50,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "NOT_FOUND" });
     }
 
-    // 3. Define a janela de tempo "hoje"
     const inicioDoDia = new Date();
     inicioDoDia.setHours(0, 0, 0, 0);
     const fimDoDia = new Date();
     fimDoDia.setHours(23, 59, 59, 999);
 
-    // 4. Busca TODOS os agendamentos de hoje com status PENDENTE ou CONFIRMADO
     const agendamentos = await prisma.appointment.findMany({
       where: {
         client_id: cliente.id,
@@ -79,12 +73,10 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // 5. Se não houver agendamento hoje, retorna NOT_FOUND
     if (!agendamentos.length) {
       return NextResponse.json({ status: "NOT_FOUND" });
     }
 
-    // 6. Se houver mais de um, retorna lista para o frontend decidir
     if (agendamentos.length > 1) {
       return NextResponse.json({
         status: "MULTIPLE_FOUND",
@@ -97,7 +89,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // 7. Se houver apenas um, segue fluxo atual
     const agendamento = agendamentos[0];
 
     await prisma.$transaction(async (tx) => {

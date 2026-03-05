@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
-// POST - Registra check-in pelo appointment_id
+// POST - Registra check-in pelo appointment_id + organizationSlug
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { appointment_id } = body;
+    const { appointment_id, organizationSlug } = body;
 
     if (!appointment_id) {
       return NextResponse.json(
@@ -14,7 +14,24 @@ export async function POST(request: Request) {
       );
     }
 
-    // Busca o agendamento + cliente + serviço + pacote
+    if (!organizationSlug) {
+      return NextResponse.json(
+        { error: "organizationSlug é obrigatório" },
+        { status: 400 },
+      );
+    }
+
+    const org = await prisma.organization.findUnique({
+      where: { slug: organizationSlug },
+    });
+
+    if (!org) {
+      return NextResponse.json(
+        { error: "Organização não encontrada" },
+        { status: 404 },
+      );
+    }
+
     const appt = await prisma.appointment.findUnique({
       where: { id: appointment_id },
       include: {
@@ -32,6 +49,13 @@ export async function POST(request: Request) {
       );
     }
 
+    if (appt.organization_id !== org.id) {
+      return NextResponse.json(
+        { error: "Agendamento não pertence a esta organização" },
+        { status: 403 },
+      );
+    }
+
     if (appt.status === "REALIZADO") {
       return NextResponse.json(
         { error: "Este agendamento já foi realizado." },
@@ -39,7 +63,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verifica se já existe check-in para esse agendamento
     const existingCheckIn = await prisma.checkIn.findFirst({
       where: {
         appointment_id: appt.id,
@@ -54,7 +77,6 @@ export async function POST(request: Request) {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      // Cria o check-in
       const checkIn = await tx.checkIn.create({
         data: {
           appointment_id: appt.id,
