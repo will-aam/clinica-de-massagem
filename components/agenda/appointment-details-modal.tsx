@@ -1,3 +1,10 @@
+// components/agenda/appointment-details-modal.tsx
+// Modal para exibir detalhes do agendamento, status, forma de pagamento, observações e ações rápidas como confirmar via WhatsApp, gerar recibo ou cancelar sessão.
+// Utiliza componentes de UI pré-existentes como Dialog, Button, Select, etc., e ícones da biblioteca lucide-react para uma interface intuitiva e funcional. O modal é responsivo e adaptado para diferentes tamanhos de tela.
+// O estado do modal é controlado externamente via props, permitindo integração fácil com a lista de agendamentos. A função handleWhatsApp gera uma mensagem personalizada com base no nome do cliente e se é a última sessão do pacote, facilitando a comunicação direta. O modal também destaca visualmente agendamentos com cobranças pendentes para rápida identificação.
+// Este componente é parte fundamental da experiência de gerenciamento de agendamentos, proporcionando uma visão detalhada e ações rápidas para cada sessão agendada.
+// O código inclui tratamento de formatação de horário, cálculo de tempo de check-in para indicar se o cliente chegou no horário, antecipado ou atrasado, e utiliza a biblioteca sonner para exibir notificações ao usuário.
+// O design é pensado para ser limpo e funcional, com uso de cores e badges para destacar informações importantes, garantindo que os administradores possam gerenciar seus agendamentos de forma eficiente e agradável.
 "use client";
 
 import { useState, useEffect } from "react";

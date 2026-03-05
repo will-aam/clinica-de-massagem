@@ -3,13 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
 import type { Client, Package, CheckIn } from "@prisma/client";
 
-// Tipos auxiliares
 type ClientWithRelations = Client & {
   packages: Package[];
   check_ins: CheckIn[];
 };
 
-// GET - Busca detalhes de um cliente específico
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -36,7 +34,7 @@ export async function GET(
         },
         check_ins: {
           orderBy: {
-            date_time: "desc", // 🔥 CORRIGIDO: campo correto é date_time
+            date_time: "desc",
           },
           take: 10,
         },
@@ -50,7 +48,6 @@ export async function GET(
       );
     }
 
-    // Busca o pacote ativo
     const activePackage = client.packages.find(
       (pkg: Package) => pkg.used_sessions < pkg.total_sessions,
     );
@@ -79,7 +76,6 @@ export async function GET(
   }
 }
 
-// DELETE - Deleta um cliente
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -118,7 +114,6 @@ export async function DELETE(
   }
 }
 
-// POST - Adiciona um novo pacote ao cliente
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -131,11 +126,12 @@ export async function POST(
     }
 
     const { id } = await params;
-    const { total_sessions, service_id, price } = await request.json();
+    const { template_id, total_sessions, service_id, price } =
+      await request.json();
 
-    if (!total_sessions) {
+    if (!service_id) {
       return NextResponse.json(
-        { error: "Total de sessões é obrigatório" },
+        { error: "service_id é obrigatório" },
         { status: 400 },
       );
     }
@@ -154,15 +150,50 @@ export async function POST(
       );
     }
 
+    let nameValue = "";
+    let totalSessionsValue = 0;
+    let priceValue = 0;
+
+    if (template_id) {
+      const template = await prisma.packageTemplate.findFirst({
+        where: {
+          id: template_id,
+          organization_id: admin.organizationId,
+        },
+      });
+
+      if (!template) {
+        return NextResponse.json(
+          { error: "Template de pacote não encontrado" },
+          { status: 404 },
+        );
+      }
+
+      nameValue = template.name;
+      totalSessionsValue = template.total_sessions;
+      priceValue = Number(template.price);
+    } else {
+      if (!total_sessions) {
+        return NextResponse.json(
+          { error: "Total de sessões é obrigatório" },
+          { status: 400 },
+        );
+      }
+
+      nameValue = `Pacote de ${total_sessions} sessões`;
+      totalSessionsValue = Number(total_sessions);
+      priceValue = Number(price || 0);
+    }
+
     const pkg = await prisma.package.create({
       data: {
-        name: `Pacote de ${total_sessions} sessões`,
-        total_sessions: Number(total_sessions),
+        name: nameValue,
+        total_sessions: totalSessionsValue,
         used_sessions: 0,
-        price: price || 0,
+        price: priceValue,
         client_id: id,
-        service_id: service_id || null,
         organization_id: admin.organizationId,
+        service_id, // ✅ obrigatório no schema
       },
     });
 
@@ -173,7 +204,6 @@ export async function POST(
   }
 }
 
-// PUT - Atualiza dados do cliente
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
@@ -202,7 +232,6 @@ export async function PUT(
       );
     }
 
-    // Se CPF mudou, valida duplicidade na organização
     if (body.cpf && body.cpf !== client.cpf) {
       const existing = await prisma.client.findFirst({
         where: {

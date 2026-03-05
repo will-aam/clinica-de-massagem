@@ -44,8 +44,8 @@ interface NewAppointmentModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
-  openingTime?: string; // "08:00"
-  closingTime?: string; // "19:00"
+  openingTime?: string;
+  closingTime?: string;
 }
 
 type ClientOption = {
@@ -58,7 +58,13 @@ type ServiceOption = {
   name: string;
 };
 
-// Gera slots de 30 em 30 minutos entre openingTime e closingTime
+type ActivePackage = {
+  id: string;
+  name: string;
+  total_sessions: number;
+  used_sessions: number;
+};
+
 function generateTimeSlots(openingTime: string, closingTime: string) {
   const [openH, openM] = openingTime.split(":").map(Number);
   const [closeH, closeM] = closingTime.split(":").map(Number);
@@ -101,6 +107,11 @@ export function NewAppointmentModal({
     string | undefined
   >(undefined);
 
+  const [activePackage, setActivePackage] = useState<ActivePackage | null>(
+    null,
+  );
+  const [usePackage, setUsePackage] = useState(false);
+
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -110,7 +121,6 @@ export function NewAppointmentModal({
   const decrementSessions = () =>
     setSessions((prev) => (prev > 2 ? prev - 1 : 2));
 
-  // Carrega lista básica de clientes e serviços da organização
   useEffect(() => {
     async function loadOptions() {
       if (!open) return;
@@ -130,8 +140,6 @@ export function NewAppointmentModal({
               name: c.name,
             })),
           );
-        } else {
-          console.error("Falha ao carregar clientes");
         }
 
         if (servicesRes.ok) {
@@ -142,11 +150,9 @@ export function NewAppointmentModal({
               name: s.name,
             })),
           );
-        } else {
-          console.error("Falha ao carregar serviços");
         }
       } catch (error) {
-        console.error("Erro ao carregar opções de cliente/serviço:", error);
+        console.error("Erro ao carregar opções:", error);
       } finally {
         setLoadingOptions(false);
       }
@@ -154,6 +160,28 @@ export function NewAppointmentModal({
 
     loadOptions();
   }, [open]);
+
+  // Carrega pacote ativo quando cliente muda
+  useEffect(() => {
+    async function loadClientPackage() {
+      if (!selectedClientId) {
+        setActivePackage(null);
+        setUsePackage(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/clients/${selectedClientId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setActivePackage(data.activePackage || null);
+      } catch (error) {
+        console.error("Erro ao buscar pacote do cliente:", error);
+      }
+    }
+
+    loadClientPackage();
+  }, [selectedClientId]);
 
   const handleSave = async () => {
     if (!selectedClientId) {
@@ -183,6 +211,7 @@ export function NewAppointmentModal({
         clientId: selectedClientId,
         serviceId: selectedServiceId,
         dateTime: fullDateTime,
+        packageId: usePackage && activePackage ? activePackage.id : undefined,
       });
 
       if (!result.success) {
@@ -216,12 +245,11 @@ export function NewAppointmentModal({
             Novo Agendamento
           </DialogTitle>
           <DialogDescription>
-            Marque um horário avulso ou inicie um pacote recorrente.
+            Marque um horário avulso ou use um pacote existente.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-5 py-4">
-          {/* Seleção de Cliente */}
           <div className="flex flex-col gap-2">
             <Label htmlFor="client">Cliente</Label>
             <Select
@@ -248,9 +276,28 @@ export function NewAppointmentModal({
             </Select>
           </div>
 
-          {/* Seleção de Serviço */}
+          {/* Pacote ativo */}
+          {activePackage && (
+            <div className="flex items-center justify-between bg-muted/30 p-3 rounded-lg border border-border/40">
+              <div className="flex flex-col">
+                <span className="text-sm font-medium">
+                  Pacote ativo: {activePackage.name}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Restam{" "}
+                  {activePackage.total_sessions - activePackage.used_sessions}{" "}
+                  sessões
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">Usar</Label>
+                <Switch checked={usePackage} onCheckedChange={setUsePackage} />
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-2">
-            <Label htmlFor="service">Serviço ou Pacote</Label>
+            <Label htmlFor="service">Serviço</Label>
             <Select
               disabled={loadingOptions}
               value={selectedServiceId}
@@ -324,7 +371,7 @@ export function NewAppointmentModal({
 
           <div className="h-px bg-border/50 my-1" />
 
-          {/* Recorrência (ainda visual, futura ligação com pacotes) */}
+          {/* Recorrência */}
           <div className="flex flex-col gap-4 bg-muted/30 p-3.5 rounded-xl border border-border/50 transition-all">
             <div className="flex items-center justify-between">
               <div className="flex flex-col gap-1">

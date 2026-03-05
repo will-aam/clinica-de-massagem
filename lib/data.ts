@@ -1,5 +1,6 @@
 // In-memory data store for the clinic management app
 // In production, this would be backed by Prisma + a real database
+// lib/data.ts
 
 export interface Admin {
   id: string;
@@ -17,6 +18,7 @@ export interface Client {
 
 export interface Package {
   id: string;
+  name: string;
   client_id: string;
   total_sessions: number;
   used_sessions: number;
@@ -77,6 +79,7 @@ const clients: Client[] = [
 const packages: Package[] = [
   {
     id: "1",
+    name: "Pacote 10 Sessões",
     client_id: "1",
     total_sessions: 10,
     used_sessions: 4,
@@ -85,6 +88,7 @@ const packages: Package[] = [
   },
   {
     id: "2",
+    name: "Pacote 10 Sessões",
     client_id: "2",
     total_sessions: 10,
     used_sessions: 10,
@@ -93,6 +97,7 @@ const packages: Package[] = [
   },
   {
     id: "3",
+    name: "Pacote 5 Sessões",
     client_id: "3",
     total_sessions: 5,
     used_sessions: 3,
@@ -101,6 +106,7 @@ const packages: Package[] = [
   },
   {
     id: "4",
+    name: "Pacote 10 Sessões",
     client_id: "4",
     total_sessions: 10,
     used_sessions: 8,
@@ -109,6 +115,7 @@ const packages: Package[] = [
   },
   {
     id: "5",
+    name: "Pacote 10 Sessões",
     client_id: "5",
     total_sessions: 10,
     used_sessions: 1,
@@ -255,6 +262,7 @@ export function createClient(data: {
 
   const newPackage: Package = {
     id: String(packages.length + 1),
+    name: `Pacote de ${data.total_sessions} sessões`,
     client_id: newClient.id,
     total_sessions: data.total_sessions,
     used_sessions: 0,
@@ -270,7 +278,6 @@ export function addPackageToClient(
   clientId: string,
   totalSessions: number,
 ): Package {
-  // Deactivate existing active packages
   packages.forEach((p) => {
     if (p.client_id === clientId && p.active) {
       p.active = false;
@@ -279,6 +286,7 @@ export function addPackageToClient(
 
   const newPackage: Package = {
     id: String(packages.length + 1),
+    name: `Pacote de ${totalSessions} sessões`,
     client_id: clientId,
     total_sessions: totalSessions,
     used_sessions: 0,
@@ -330,7 +338,6 @@ export function deleteClient(id: string): boolean {
   const index = clients.findIndex((c) => c.id === id);
   if (index === -1) return false;
   clients.splice(index, 1);
-  // Remove associated packages and check-ins
   const pkgIds = packages.filter((p) => p.client_id === id).map((p) => p.id);
   for (let i = packages.length - 1; i >= 0; i--) {
     if (packages[i].client_id === id) packages.splice(i, 1);
