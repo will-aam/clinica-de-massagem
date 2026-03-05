@@ -28,6 +28,15 @@ export async function POST(req: NextRequest) {
 
     const cpfLimpo = cpf.replace(/\D/g, "");
 
+    const cpfFormatado =
+      cpfLimpo.length === 11
+        ? cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+        : cpf;
+
+    const cpfCandidates = Array.from(
+      new Set([cpf.trim(), cpfLimpo, cpfFormatado]),
+    );
+
     const organizacao = await prisma.organization.findUnique({
       where: { slug: organizationSlug },
     });
@@ -41,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     const cliente = await prisma.client.findFirst({
       where: {
-        cpf: cpfLimpo,
+        cpf: { in: cpfCandidates },
         organization_id: organizacao.id,
       },
     });
