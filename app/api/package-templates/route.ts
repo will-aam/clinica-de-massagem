@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 
-// GET - Lista todos os templates de pacotes
-export async function GET() {
+// GET - Lista todos os templates de pacotes (com filtro opcional de ativos)
+export async function GET(req: NextRequest) {
   try {
-    const admin = await getCurrentAdmin();
+    const admin = await requireAuth();
 
     if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const onlyActive = searchParams.get("active") === "true";
+
     const templates = await prisma.packageTemplate.findMany({
       where: {
         organization_id: admin.organizationId,
+        ...(onlyActive ? { active: true } : {}), // Filtra apenas ativos se solicitado
       },
       orderBy: {
         created_at: "desc",
@@ -30,21 +34,14 @@ export async function GET() {
 // POST - Cria um novo template de pacote
 export async function POST(request: Request) {
   try {
-    const admin = await getCurrentAdmin();
+    const admin = await requireAuth();
 
     if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const body = await request.json();
-    const {
-      name,
-      description,
-      total_sessions,
-      price,
-      validity_days,
-      is_active,
-    } = body;
+    const { name, description, total_sessions, price, validity_days } = body;
 
     // Validações
     if (!name || !total_sessions || !price) {
@@ -61,13 +58,6 @@ export async function POST(request: Request) {
       );
     }
 
-    if (Number(price) <= 0) {
-      return NextResponse.json(
-        { error: "O preço deve ser maior que zero" },
-        { status: 400 },
-      );
-    }
-
     const template = await prisma.packageTemplate.create({
       data: {
         name,
@@ -75,7 +65,7 @@ export async function POST(request: Request) {
         total_sessions: Number(total_sessions),
         price: Number(price),
         validity_days: validity_days ? Number(validity_days) : null,
-        is_active: is_active !== undefined ? is_active : true,
+        active: true, // Garante que nasce ativo
         organization_id: admin.organizationId,
       },
     });

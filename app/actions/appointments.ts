@@ -86,6 +86,7 @@ export async function createAppointment(
 }
 
 // --- NOVO: Ação de Atualizar (Para o Modal de Detalhes) ---
+// --- Ação de Atualizar (Versão Inteligente) ---
 export async function updateAppointment(
   id: string,
   data: {
@@ -98,46 +99,66 @@ export async function updateAppointment(
   try {
     const admin = await requireAuth();
 
-    // Mapeamento do Status do Modal para o Prisma Enum
+    // 1. Mapeamento Robusto de Status
     const statusMap: Record<string, AppointmentStatus> = {
       a_confirmar: AppointmentStatus.PENDENTE,
       confirmado: AppointmentStatus.CONFIRMADO,
       atrasou: AppointmentStatus.PENDENTE,
-      não_comparecimento: AppointmentStatus.CANCELADO,
+      nao_compareceu: AppointmentStatus.CANCELADO, // Corrigido sem acento para bater com o Select
       cancelado: AppointmentStatus.CANCELADO,
       realizado: AppointmentStatus.REALIZADO,
     };
 
-    // Mapeamento do Pagamento do Modal para o Prisma Enum
+    // 2. Mapeamento de Pagamento
     const paymentMap: Record<string, PaymentMethod> = {
       pix: PaymentMethod.PIX,
       dinheiro: PaymentMethod.DINHEIRO,
       cartao_credito: PaymentMethod.CARTAO_CREDITO,
       cartao_debito: PaymentMethod.CARTAO_DEBITO,
       transferencia: PaymentMethod.OUTRO,
-      nenhum: PaymentMethod.OUTRO,
     };
 
-    await prisma.appointment.update({
+    const finalStatus = statusMap[data.status] || AppointmentStatus.PENDENTE;
+    const finalPaymentMethod =
+      data.paymentMethod === "nenhum"
+        ? null
+        : paymentMap[data.paymentMethod] || null;
+
+    // 3. REGRA DE NEGÓCIO: Se houver pagamento ou for pacote, não há cobrança ativa (has_charge = false)
+    // Se o status for Realizado e tiver método de pagamento, entendemos que foi pago.
+    let finalHasCharge = data.hasCharge;
+    if (
+      finalStatus === AppointmentStatus.REALIZADO &&
+      finalPaymentMethod !== null
+    ) {
+      finalHasCharge = false;
+    }
+
+    // Se for cancelado, também removemos a "cobrança ativa" para não sujar o financeiro
+    if (finalStatus === AppointmentStatus.CANCELADO) {
+      finalHasCharge = false;
+    }
+
+    const updated = await prisma.appointment.update({
       where: {
         id,
-        organization_id: admin.organizationId, // Segurança
+        organization_id: admin.organizationId,
       },
       data: {
-        status: statusMap[data.status] || AppointmentStatus.PENDENTE,
-        payment_method:
-          data.paymentMethod === "nenhum"
-            ? null
-            : paymentMap[data.paymentMethod] || null,
+        status: finalStatus,
+        payment_method: finalPaymentMethod,
         observations: data.observations,
-        has_charge: data.hasCharge,
+        has_charge: finalHasCharge,
+      },
+      include: {
+        service: true, // Incluímos para o revalidate ter o contexto do preço se necessário
       },
     });
 
     revalidatePath("/admin/agenda");
-    return { success: true };
+    return { success: true, appointment: updated };
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao atualizar agendamento:", error);
     return { success: false, error: "Erro ao salvar alterações." };
   }
 }

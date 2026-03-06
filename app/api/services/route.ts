@@ -1,19 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getCurrentAdmin } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 
-// GET - Lista todos os serviços da organização
-export async function GET() {
+// GET - Lista os serviços da organização (com filtro opcional de ativos)
+export async function GET(req: NextRequest) {
   try {
-    const admin = await getCurrentAdmin();
-
+    const admin = await requireAuth();
     if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const onlyActive = searchParams.get("active") === "true";
+
     const services = await prisma.service.findMany({
       where: {
         organization_id: admin.organizationId,
+        ...(onlyActive ? { active: true } : {}), // Filtra apenas ativos se solicitado
       },
       include: {
         category: {
@@ -38,8 +41,7 @@ export async function GET() {
 // POST - Cria um novo serviço
 export async function POST(request: Request) {
   try {
-    const admin = await getCurrentAdmin();
-
+    const admin = await requireAuth();
     if (!admin) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
@@ -47,7 +49,6 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { name, description, duration, price, category_id } = body;
 
-    // Validações
     if (!name || !duration || !price) {
       return NextResponse.json(
         { error: "Nome, duração e preço são obrigatórios" },
@@ -55,11 +56,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Se não tiver categoria, cria uma padrão
     let finalCategoryId = category_id;
 
     if (!finalCategoryId) {
-      // Busca ou cria categoria "Geral"
       let defaultCategory = await prisma.category.findFirst({
         where: {
           name: "Geral",
@@ -75,7 +74,6 @@ export async function POST(request: Request) {
           },
         });
       }
-
       finalCategoryId = defaultCategory.id;
     }
 
@@ -87,6 +85,7 @@ export async function POST(request: Request) {
         price: Number(price),
         category_id: finalCategoryId,
         organization_id: admin.organizationId,
+        active: true, // Garante que nasce ativo
       },
       include: {
         category: true,

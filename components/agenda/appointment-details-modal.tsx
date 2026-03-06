@@ -36,9 +36,7 @@ import {
   Clock,
   CalendarDays,
   User,
-  Repeat,
   CalendarX2,
-  CalendarClock,
   ReceiptText,
   AlertCircle,
   Trash2,
@@ -76,13 +74,11 @@ export function AppointmentDetailsModal({
 
   const componentRef = useRef<HTMLDivElement>(null);
 
-  // Hook de Impressão configurado conforme v3 da biblioteca
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
     documentTitle: `Recibo_${appointment?.clientName || "Cliente"}`,
   });
 
-  // Carrega configurações da organização para o cabeçalho do recibo
   useEffect(() => {
     async function loadSettings() {
       try {
@@ -98,36 +94,53 @@ export function AppointmentDetailsModal({
     if (open) loadSettings();
   }, [open]);
 
-  // Sincroniza os estados internos com os dados do agendamento clicado
   useEffect(() => {
     if (appointment) {
       const dbStatus = appointment.status?.toLowerCase();
-      setStatus(
-        dbStatus === "pendente" ? "a_confirmar" : dbStatus || "a_confirmar",
-      );
+      // Mapeia o que vem do banco para o valor do Select
+      const mappedStatus =
+        dbStatus === "pendente"
+          ? "a_confirmar"
+          : dbStatus === "cancelado"
+            ? "cancelado"
+            : dbStatus || "a_confirmar";
+
+      setStatus(mappedStatus);
       setPayment(appointment.paymentMethod?.toLowerCase() || "nenhum");
       setObs(appointment.observations || "");
-      setHasCharge(appointment.hasCharge || false);
+      setHasCharge(appointment.hasCharge ?? false);
     }
   }, [appointment]);
 
-  if (!appointment) return null;
+  // 🔥 REGRA DE NEGÓCIO EM TEMPO REAL: Se houver pagamento ou realizado, sugere tirar a cobrança
+  useEffect(() => {
+    if (
+      (status === "realizado" && payment !== "nenhum") ||
+      status === "cancelado"
+    ) {
+      setHasCharge(false);
+    }
+  }, [status, payment]);
 
-  // Trava para evitar edição de cobrança em atendimentos já quitados/confirmados
-  const isFinalized = status === "confirmado" || status === "realizado";
+  if (!appointment) return null;
 
   const handleSave = async (overriddenStatus?: string) => {
     setIsSaving(true);
     try {
+      const targetStatus = overriddenStatus || status;
       const result = await updateAppointment(appointment.id, {
-        status: overriddenStatus || status,
+        status: targetStatus,
         paymentMethod: payment,
         observations: obs,
-        hasCharge,
+        hasCharge: targetStatus === "cancelado" ? false : hasCharge,
       });
 
       if (result.success) {
-        toast.success("Alterações salvas!");
+        toast.success(
+          targetStatus === "cancelado"
+            ? "Sessão cancelada!"
+            : "Alterações salvas!",
+        );
         onRefresh?.();
         onOpenChange(false);
       } else {
@@ -144,7 +157,7 @@ export function AppointmentDetailsModal({
     try {
       const result = await deleteAppointment(appointment.id);
       if (result.success) {
-        toast.success("Excluído com sucesso.");
+        toast.success("Agendamento excluído definitivamente.");
         onRefresh?.();
         onOpenChange(false);
       }
@@ -168,7 +181,6 @@ export function AppointmentDetailsModal({
           hasCharge ? "border-2 border-destructive shadow-lg" : "",
         )}
       >
-        {/* Componente Invisível que será impresso */}
         <ThermalReceipt
           ref={componentRef}
           appointment={appointment}
@@ -196,19 +208,21 @@ export function AppointmentDetailsModal({
                 <Trash2 className="h-5 w-5" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="rounded-2xl">
               <AlertDialogHeader>
                 <AlertDialogTitle>Excluir permanentemente?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Esta ação removerá o agendamento do banco de dados e não pode
-                  ser desfeita.
+                  Isso apagará o registro do banco. Para manter o histórico, use
+                  o botão "Cancelar Sessão".
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Voltar</AlertDialogCancel>
+                <AlertDialogCancel className="rounded-xl">
+                  Voltar
+                </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDelete}
-                  className="bg-destructive text-white"
+                  className="bg-destructive text-white rounded-xl"
                 >
                   Sim, Excluir
                 </AlertDialogAction>
@@ -217,31 +231,41 @@ export function AppointmentDetailsModal({
           </AlertDialog>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto py-2 pr-1">
+        <div className="flex flex-col gap-4 overflow-y-auto py-2">
           <div className="bg-muted/30 p-3 rounded-xl flex flex-col gap-2">
             <div className="flex justify-between items-center text-sm font-medium">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" /> Atendimento
               </div>
-              <Badge variant="outline">
-                {appointment.sessionInfo || "Avulso"}
+              <Badge
+                variant={status === "cancelado" ? "destructive" : "outline"}
+                className="rounded-lg"
+              >
+                {status === "cancelado"
+                  ? "Cancelado"
+                  : appointment.sessionInfo || "Avulso"}
               </Badge>
             </div>
             <div className="flex items-center gap-2 text-sm font-semibold">
               <Clock className="h-4 w-4 text-muted-foreground" />
-              {appointment.time} até{" "}
+              {appointment.time} às{" "}
               {calculateEndTime(appointment.time, appointment.duration)}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label className="text-xs">Status</Label>
+              <Label className="text-xs font-bold">Status do Atendimento</Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger
                   className={cn(
                     status === "confirmado" &&
                       "bg-emerald-50 border-emerald-200 text-emerald-700",
+                    status === "realizado" &&
+                      "bg-blue-50 border-blue-200 text-blue-700",
+                    status === "cancelado" &&
+                      "bg-destructive/10 border-destructive/20 text-destructive",
+                    "rounded-xl",
                   )}
                 >
                   <SelectValue />
@@ -249,53 +273,56 @@ export function AppointmentDetailsModal({
                 <SelectContent>
                   <SelectItem value="a_confirmar">A Confirmar</SelectItem>
                   <SelectItem value="confirmado">Confirmado</SelectItem>
-                  <SelectItem value="atrasou">Atrasou</SelectItem>
+                  <SelectItem value="realizado">Realizado</SelectItem>
+                  <SelectItem value="nao_compareceu">Não Compareceu</SelectItem>
                   <SelectItem value="cancelado">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1.5">
-              <Label className="text-xs">Pagamento</Label>
+              <Label className="text-xs font-bold">Forma de Pagamento</Label>
               <Select value={payment} onValueChange={setPayment}>
-                <SelectTrigger>
+                <SelectTrigger className="rounded-xl">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="nenhum">Não informado</SelectItem>
+                  <SelectItem value="nenhum">Aguardando...</SelectItem>
                   <SelectItem value="pix">Pix</SelectItem>
                   <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="cartao_credito">Crédito</SelectItem>
-                  <SelectItem value="cartao_debito">Débito</SelectItem>
+                  <SelectItem value="cartao_credito">Cartão Crédito</SelectItem>
+                  <SelectItem value="cartao_debito">Cartão Débito</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Observações</Label>
+            <Label className="text-xs font-bold">Observações Internas</Label>
             <Textarea
               value={obs}
               onChange={(e) => setObs(e.target.value)}
-              className="bg-muted/20 resize-none h-20"
+              placeholder="Ex: Cliente prefere massagem mais forte nas costas..."
+              className="bg-muted/20 resize-none h-20 rounded-xl"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant={hasCharge ? "destructive" : "outline"}
-              disabled={isFinalized}
+              className="rounded-xl"
               onClick={() => setHasCharge(!hasCharge)}
             >
               <AlertCircle className="mr-2 h-4 w-4" />
-              {hasCharge ? "Cobrança Ativa" : "Sem Cobrança"}
+              {hasCharge ? "Cobrança Ativa" : "Sem Pendência"}
             </Button>
 
             <Button
               variant="secondary"
-              className="bg-primary/10 text-primary hover:bg-primary/20 font-bold"
+              className="bg-primary/10 text-primary hover:bg-primary/20 font-bold rounded-xl"
               onClick={() => {
                 handlePrint();
-                toast.success("Preparando para imprimir...");
+                toast.success("Gerando recibo...");
               }}
             >
               <Printer className="mr-2 h-4 w-4" /> Recibo
@@ -304,47 +331,54 @@ export function AppointmentDetailsModal({
         </div>
 
         <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                variant="ghost"
-                className="text-destructive w-full sm:w-auto"
-              >
-                <CalendarX2 className="mr-2 h-4 w-4" /> Cancelar Sessão
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Cancelar atendimento?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  O registro ficará na agenda marcado com um traço de cancelado.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Sair</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => handleSave("cancelado")}
-                  className="bg-destructive text-white"
+          {status !== "cancelado" && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="text-destructive w-full sm:w-auto hover:bg-destructive/10 rounded-xl"
                 >
-                  Confirmar
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <CalendarX2 className="mr-2 h-4 w-4" /> Cancelar Sessão
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Deseja cancelar este atendimento?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    O agendamento continuará na agenda com um traço de
+                    cancelado, preservando seu histórico.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel className="rounded-xl">
+                    Voltar
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => handleSave("cancelado")}
+                    className="bg-destructive text-white rounded-xl"
+                  >
+                    Confirmar Cancelamento
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
 
           <div className="flex-1" />
 
           <Button
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="w-full sm:w-auto bg-primary"
+            className="w-full sm:w-auto bg-primary rounded-xl font-bold shadow-md"
           >
             {isSaving ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
               <Save className="mr-2 h-4 w-4" />
             )}
-            Salvar Alterações
+            Salvar
           </Button>
         </DialogFooter>
       </DialogContent>
