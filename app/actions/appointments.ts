@@ -160,3 +160,31 @@ export async function deleteAppointment(id: string) {
     return { success: false, error: "Erro ao excluir agendamento." };
   }
 }
+/**
+ * 🎯 Atualiza apenas a data/hora de um agendamento.
+ * Recebe string ISO para garantir que o dado não se perca no transporte.
+ */
+export async function updateAppointmentDateTime(
+  id: string,
+  newDateIso: string,
+) {
+  try {
+    const admin = await requireAuth();
+
+    await prisma.appointment.update({
+      where: {
+        id,
+        organization_id: admin.organizationId,
+      },
+      data: {
+        date_time: new Date(newDateIso), // Converte aqui no servidor
+      },
+    });
+
+    revalidatePath("/admin/agenda");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao mover agendamento:", error);
+    return { success: false, error: "Falha ao reagendar." };
+  }
+}

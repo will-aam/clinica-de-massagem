@@ -96,7 +96,14 @@ export default function AgendaPage() {
         return;
       }
       const data = await res.json();
-      setAppointments(data.appointments ?? []);
+
+      // Mapeia para garantir que o date_time seja um objeto Date real para o DnD
+      const mapped = (data.appointments ?? []).map((appt: any) => ({
+        ...appt,
+        date_time: new Date(appt.date_time),
+      }));
+
+      setAppointments(mapped);
     } catch (error) {
       setAppointments([]);
     } finally {
@@ -156,22 +163,28 @@ export default function AgendaPage() {
           </Popover>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-            <div className="flex items-center w-full sm:w-auto justify-between sm:justify-center bg-muted/20 sm:bg-transparent rounded-2xl p-1 sm:p-0 border sm:border-0">
-              <Button variant="ghost" size="icon" onClick={prevWeek}>
-                <ChevronLeft className="h-4 w-4" />
+            <div className="flex items-center w-full sm:w-auto justify-between sm:justify-center bg-muted/20 sm:bg-transparent rounded-2xl p-1 sm:p-0 border sm:border-0 border-border/50">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={prevWeek}
+                className="shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full"
+              >
+                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
-              <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden">
+
+              <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden px-1">
                 {weekDays.map((day) => (
                   <button
                     key={day.toISOString()}
                     onClick={() => setSelectedDate(day)}
                     className={cn(
-                      "flex flex-col items-center justify-center h-12 w-10 sm:h-14 sm:w-12 rounded-xl border transition-all",
+                      "flex flex-col items-center justify-center h-12 w-10 sm:h-14 sm:w-12 rounded-xl border transition-all shrink-0",
                       isSameDay(day, selectedDate)
-                        ? "bg-primary text-primary-foreground shadow-md"
+                        ? "bg-primary text-primary-foreground shadow-md scale-105"
                         : isSameDay(day, new Date())
                           ? "bg-primary/10 text-primary border-primary/20"
-                          : "bg-card text-muted-foreground",
+                          : "bg-card text-muted-foreground hover:bg-muted/50",
                     )}
                   >
                     <span className="text-[9px] font-bold uppercase">
@@ -183,8 +196,14 @@ export default function AgendaPage() {
                   </button>
                 ))}
               </div>
-              <Button variant="ghost" size="icon" onClick={nextWeek}>
-                <ChevronRight className="h-4 w-4" />
+
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={nextWeek}
+                className="shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full"
+              >
+                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
               </Button>
             </div>
 
@@ -192,13 +211,14 @@ export default function AgendaPage() {
               variant="outline"
               size="icon"
               onClick={() => setIsSettingsOpen(true)}
+              className="rounded-xl h-12 sm:h-10 w-12 sm:w-10"
             >
               <Settings2 className="h-4 w-4" />
             </Button>
 
             <Button
               onClick={() => setIsNewModalOpen(true)}
-              className="rounded-full w-full sm:w-auto"
+              className="rounded-xl w-full sm:w-auto h-12 sm:h-10 font-semibold"
             >
               <Plus className="h-4 w-4 mr-1" /> Novo
             </Button>
@@ -227,7 +247,7 @@ export default function AgendaPage() {
           if (!open) setSelectedAppointment(null);
         }}
         appointment={selectedAppointment}
-        onRefresh={() => loadAppointments(selectedDate)} // <-- AQUI ESTÁ A CONEXÃO
+        onRefresh={() => loadAppointments(selectedDate)}
       />
 
       <ScheduleSettingsModal
@@ -240,7 +260,7 @@ export default function AgendaPage() {
         }) => {
           setOpeningTime(newOpening);
           setClosingTime(newClosing);
-          // Lógica de salvamento via API omitida para brevidade...
+          // Lógica de salvamento...
         }}
         onClearToday={() => loadAppointments(selectedDate)}
       />
