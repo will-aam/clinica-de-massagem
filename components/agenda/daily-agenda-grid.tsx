@@ -192,10 +192,17 @@ export function DailyAgendaGrid({
     if (!active) return;
 
     const appt = active.data.current as Appointment;
-    const currentTop = calculatePosition(appt.time, appt.duration).top;
-    const newTop = currentTop + delta.y;
 
-    // Converte Pixels de volta para Horário
+    // 1. Pegamos a posição atual do card em pixels
+    const pos = calculatePosition(appt.time, appt.duration);
+    if (isNaN(pos.top)) {
+      console.error("Erro: Posição inicial inválida para o agendamento", appt);
+      return;
+    }
+
+    const newTop = pos.top + delta.y;
+
+    // 2. Converte Pixels de volta para Horário
     const minutesFromStart = (newTop / HOUR_HEIGHT) * 60;
     const totalMinutes = startHour * 60 + minutesFromStart;
 
@@ -205,34 +212,57 @@ export function DailyAgendaGrid({
     const newHours = Math.floor(snappedMinutes / 60);
     const newMins = snappedMinutes % 60;
 
-    // Valida se está dentro do horário de funcionamento
+    // 3. Valida se o cálculo resultou em números válidos
+    if (isNaN(newHours) || isNaN(newMins)) {
+      toast.error("Erro ao calcular novo horário.");
+      return;
+    }
+
+    // 4. Valida se está dentro do horário de funcionamento
     if (newHours < startHour || newHours >= endHour) {
       toast.error("Horário fora do limite da agenda!");
       return;
     }
 
-    const newDate = new Date(appt.date_time || new Date());
+    // 5. CRIAÇÃO DA DATA (O PONTO DO ERRO)
+    // Usamos a data que já existe no agendamento, ou a data atual como fallback
+    let baseDate = appt.date_time ? new Date(appt.date_time) : new Date();
+
+    // Se a data base for inválida, criamos uma nova
+    if (isNaN(baseDate.getTime())) {
+      baseDate = new Date();
+    }
+
+    const newDate = new Date(baseDate);
     newDate.setHours(newHours, newMins, 0, 0);
+
+    // Verificação final antes do toISOString()
+    if (isNaN(newDate.getTime())) {
+      toast.error("Erro: Data gerada é inválida.");
+      return;
+    }
 
     const timeString = `${newHours.toString().padStart(2, "0")}:${newMins.toString().padStart(2, "0")}`;
 
-    if (timeString === appt.time) return; // Não mudou o horário
+    if (timeString === appt.time) return; // Não mudou o horário real (snapping no mesmo lugar)
 
     setIsMoving(true);
-    // ENVIAMOS COMO ISO STRING PARA A ACTION
-    const result = await updateAppointmentDateTime(
-      appt.id,
-      newDate.toISOString(),
-    );
-    setIsMoving(false);
-
-    if (result.success) {
-      toast.success(`Reagendado para às ${timeString}`);
-    } else {
-      toast.error("Falha ao mover agendamento.");
+    try {
+      const result = await updateAppointmentDateTime(
+        appt.id,
+        newDate.toISOString(),
+      );
+      if (result.success) {
+        toast.success(`Reagendado para às ${timeString}`);
+      } else {
+        toast.error(result.error || "Falha ao mover.");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão ao mover.");
+    } finally {
+      setIsMoving(false);
     }
   };
-
   const HOURS_ARRAY = Array.from(
     { length: endHour - startHour + 1 },
     (_, i) => i + startHour,

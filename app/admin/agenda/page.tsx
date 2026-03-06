@@ -95,12 +95,17 @@ export default function AgendaPage() {
         setAppointments([]);
         return;
       }
+      // app/admin/agenda/page.tsx (dentro de loadAppointments)
+
       const data = await res.json();
 
       // Mapeia para garantir que o date_time seja um objeto Date real para o DnD
       const mapped = (data.appointments ?? []).map((appt: any) => ({
         ...appt,
-        date_time: new Date(appt.date_time),
+        // O Prisma costuma retornar date_time. Se o seu banco usa dateTime, ajuste aqui:
+        date_time: appt.date_time ? new Date(appt.date_time) : new Date(),
+        // Garante que o campo time exista para o cálculo de pixels
+        time: appt.time || format(new Date(appt.date_time), "HH:mm"),
       }));
 
       setAppointments(mapped);
