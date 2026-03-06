@@ -67,13 +67,13 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-// Tipo do Template de Pacote
 type PackageTemplate = {
   id: string;
   name: string;
   total_sessions: number;
   price: number;
   description: string | null;
+  service_id: string; // 🔥 Adicione esta linha aqui
 };
 
 export function ClientForm() {
@@ -134,7 +134,7 @@ export function ClientForm() {
 
     setLoading(true);
     try {
-      // 1. Criar o Cliente
+      // 1. Criar Cliente
       const clientRes = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,10 +146,6 @@ export function ClientForm() {
           birth_date: form.birth_date
             ? format(form.birth_date, "yyyy-MM-dd")
             : null,
-          zip_code: form.zip_code || null,
-          city: form.city || null,
-          street: form.street || null,
-          number: form.number || null,
         }),
       });
 
@@ -157,7 +153,7 @@ export function ClientForm() {
       if (!clientRes.ok)
         throw new Error(clientData.error || "Erro ao criar cliente");
 
-      // 2. Criar o Pacote vinculado ao cliente (conforme o contrato da sua API)
+      // 2. Criar Pacote vinculado ao cliente
       if (form.package_template_id !== "none") {
         const template = packageTemplates.find(
           (t) => t.id === form.package_template_id,
@@ -165,22 +161,22 @@ export function ClientForm() {
 
         if (template) {
           const packageRes = await fetch("/api/packages/templates", {
-            // 🔥 Rota corrigida
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              client_id: clientData.client.id, // ID vindo da criação do cliente
-              service_id: template.id, // O ID do template que selecionamos
+              client_id: clientData.client.id,
+              service_id: template.service_id, // 🔥 O PULO DO GATO: Enviando o ID do SERVIÇO real
               total_sessions: Number(template.total_sessions),
               price: Number(template.price),
             }),
           });
 
           if (!packageRes.ok) {
-            const pkgError = await packageRes.json();
-            console.error("Erro no pacote:", pkgError);
-            toast.warning(
-              "Cliente criado, mas houve um problema ao gerar o pacote.",
+            // Tenta capturar o erro real da API
+            const errorText = await packageRes.text();
+            console.error("Erro detalhado da API de Pacotes:", errorText);
+            throw new Error(
+              "Cliente criado, mas falha ao gerar o pacote vinculado.",
             );
           }
         }
@@ -189,7 +185,8 @@ export function ClientForm() {
       toast.success("Cadastro realizado com sucesso!");
       router.push("/admin/clients");
     } catch (error: any) {
-      toast.error(error.message || "Erro inesperado no cadastro.");
+      toast.error(error.message);
+      console.error(error);
     } finally {
       setLoading(false);
     }

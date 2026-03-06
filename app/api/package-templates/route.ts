@@ -2,15 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
-// GET - Lista todos os templates de pacotes (com filtro opcional de ativos)
 export async function GET(req: NextRequest) {
   try {
     const admin = await requireAuth();
-
-    if (!admin) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
-
     const { searchParams } = new URL(req.url);
     const onlyActive = searchParams.get("active") === "true";
 
@@ -19,73 +13,54 @@ export async function GET(req: NextRequest) {
         organization_id: admin.organizationId,
         ...(onlyActive ? { active: true } : {}),
       },
-      orderBy: {
-        created_at: "desc",
+      // 🔥 Incluímos o service_id na resposta
+      select: {
+        id: true,
+        name: true,
+        total_sessions: true,
+        price: true,
+        service_id: true,
       },
+      orderBy: { created_at: "desc" },
     });
 
-    // 🔥 Sanitização: Converte Decimal para Number antes de enviar para o cliente
-    const sanitizedTemplates = templates.map((t) => ({
-      ...t,
-      price: Number(t.price),
-    }));
-
-    return NextResponse.json(sanitizedTemplates);
+    return NextResponse.json(
+      templates.map((t) => ({ ...t, price: Number(t.price) })),
+    );
   } catch (error) {
-    console.error("Erro ao buscar templates:", error);
-    return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao buscar templates" },
+      { status: 500 },
+    );
   }
 }
 
-// POST - Cria um novo template de pacote
 export async function POST(request: Request) {
   try {
     const admin = await requireAuth();
-
-    if (!admin) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { name, description, total_sessions, price, validity_days } = body;
+    const { name, total_sessions, price, service_id } = body;
 
-    // Validações
-    if (!name || !total_sessions || !price) {
-      return NextResponse.json(
-        { error: "Nome, quantidade de sessões e preço são obrigatórios" },
-        { status: 400 },
-      );
-    }
-
-    if (Number(total_sessions) < 1) {
-      return NextResponse.json(
-        { error: "O pacote deve ter pelo menos 1 sessão" },
-        { status: 400 },
-      );
+    // 🔥 Agora o service_id é obrigatório na criação do template
+    if (!name || !total_sessions || !price || !service_id) {
+      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
     const template = await prisma.packageTemplate.create({
       data: {
         name,
-        description: description || null,
         total_sessions: Number(total_sessions),
         price: Number(price),
-        validity_days: validity_days ? Number(validity_days) : null,
-        active: true,
+        service_id, // 🔥 Vincula ao serviço
         organization_id: admin.organizationId,
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      // 🔥 Também sanitizamos aqui para manter a consistência
-      template: {
-        ...template,
-        price: Number(template.price),
-      },
-    });
+    return NextResponse.json({ success: true, template });
   } catch (error) {
-    console.error("Erro ao criar template:", error);
-    return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Erro ao criar template" },
+      { status: 500 },
+    );
   }
 }

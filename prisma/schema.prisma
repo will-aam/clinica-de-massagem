@@ -161,43 +161,44 @@ model Category {
 }
 
 model Service {
-  id          String  @id @default(cuid())
-  name        String
-  description String? @db.Text
-  duration    Int // Em minutos
-  price       Decimal
-active          Boolean   @default(true)
-  category_id String
-  category    Category @relation(fields: [category_id], references: [id])
+  id              String   @id @default(cuid())
+  name            String
+  description     String?  @db.Text
+  duration        Int
+  price           Decimal
+  active          Boolean  @default(true)
+  
+  category_id     String
+  category        Category @relation(fields: [category_id], references: [id])
 
   organization_id String
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
-  appointments Appointment[]
-  packages     Package[]
+  appointments    Appointment[]
+  packages        Package[]
+
+  package_templates PackageTemplate[] 
 
   @@map("services")
 }
-
 // ==========================================
 // 5. PACOTES E VOUCHERS
 // ==========================================
 
-// 🔥 NOVO: Template de Pacote (Modelo que pode ser vendido)
+// Localize o modelo PackageTemplate e adicione as duas linhas abaixo:
 model PackageTemplate {
-  id             String   @id @default(cuid())
-  name           String   // Ex: "Pacote 10 Sessões - Drenagem"
-  description    String?  @db.Text
-  total_sessions Int      // Quantidade de sessões que vem no pacote
-  price          Decimal  // Preço de venda do pacote
-  validity_days  Int?     // Dias para expirar (null = sem limite)
-  is_active      Boolean  @default(true) // Se está disponível para venda
-  active          Boolean   @default(true)
+  id              String   @id @default(cuid())
+  name            String
+  description     String?  @db.Text
+  total_sessions  Int
+  price           Decimal
+  service_id      String
+  service         Service  @relation(fields: [service_id], references: [id])
+  active          Boolean  @default(true)
   organization_id String
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 
   @@map("package_templates")
 }
