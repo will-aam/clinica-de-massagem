@@ -21,6 +21,7 @@ export async function updatePackageTemplate(
     total_sessions?: number;
     price?: number;
     validity_days?: number | null;
+    active?: boolean; // 🔥 Campo sincronizado com o banco
   },
 ) {
   try {
@@ -34,12 +35,14 @@ export async function updatePackageTemplate(
         total_sessions: data.total_sessions,
         price: data.price,
         validity_days: data.validity_days,
+        active: data.active, // 🔥 Agora grava o status corretamente
       },
     });
 
+    // Atualiza o cache das páginas que usam pacotes
     revalidatePath("/admin/services");
+    revalidatePath("/admin/clients/new");
 
-    // Retornamos o objeto sanitizado para evitar o erro de Decimal no Modal
     return { success: true, package: sanitizePackage(updated) };
   } catch (error) {
     console.error("Erro ao atualizar pacote:", error);
@@ -60,6 +63,8 @@ export async function togglePackageTemplateStatus(
     });
 
     revalidatePath("/admin/services");
+    revalidatePath("/admin/clients/new");
+
     return { success: true, package: sanitizePackage(updated) };
   } catch (error) {
     console.error("Erro ao mudar status do pacote:", error);

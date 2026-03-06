@@ -192,6 +192,7 @@ model PackageTemplate {
   description     String?  @db.Text
   total_sessions  Int
   price           Decimal
+  validity_days   Int?
   service_id      String
   service         Service  @relation(fields: [service_id], references: [id])
   active          Boolean  @default(true)

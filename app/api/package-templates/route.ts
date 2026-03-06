@@ -13,13 +13,13 @@ export async function GET(req: NextRequest) {
         organization_id: admin.organizationId,
         ...(onlyActive ? { active: true } : {}),
       },
-      // 🔥 Incluímos o service_id na resposta
       select: {
         id: true,
         name: true,
         total_sessions: true,
         price: true,
         service_id: true,
+        active: true, // 🔥 Garantindo que o status volte para o front
       },
       orderBy: { created_at: "desc" },
     });
@@ -39,9 +39,16 @@ export async function POST(request: Request) {
   try {
     const admin = await requireAuth();
     const body = await request.json();
-    const { name, total_sessions, price, service_id } = body;
 
-    // 🔥 Agora o service_id é obrigatório na criação do template
+    // 🔥 Capturamos 'active' ou 'is_active' (para evitar erro se o front mandar diferente)
+    const { name, total_sessions, price, service_id, is_active, active } = body;
+    const finalActiveStatus =
+      active !== undefined
+        ? active
+        : is_active !== undefined
+          ? is_active
+          : true;
+
     if (!name || !total_sessions || !price || !service_id) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
@@ -51,13 +58,15 @@ export async function POST(request: Request) {
         name,
         total_sessions: Number(total_sessions),
         price: Number(price),
-        service_id, // 🔥 Vincula ao serviço
+        service_id,
+        active: finalActiveStatus, // 🔥 Agora salvamos o status correto
         organization_id: admin.organizationId,
       },
     });
 
     return NextResponse.json({ success: true, template });
   } catch (error) {
+    console.error("Erro na API POST:", error);
     return NextResponse.json(
       { error: "Erro ao criar template" },
       { status: 500 },
