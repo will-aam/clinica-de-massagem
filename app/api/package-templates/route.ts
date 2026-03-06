@@ -17,14 +17,20 @@ export async function GET(req: NextRequest) {
     const templates = await prisma.packageTemplate.findMany({
       where: {
         organization_id: admin.organizationId,
-        ...(onlyActive ? { active: true } : {}), // Filtra apenas ativos se solicitado
+        ...(onlyActive ? { active: true } : {}),
       },
       orderBy: {
         created_at: "desc",
       },
     });
 
-    return NextResponse.json(templates);
+    // 🔥 Sanitização: Converte Decimal para Number antes de enviar para o cliente
+    const sanitizedTemplates = templates.map((t) => ({
+      ...t,
+      price: Number(t.price),
+    }));
+
+    return NextResponse.json(sanitizedTemplates);
   } catch (error) {
     console.error("Erro ao buscar templates:", error);
     return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
@@ -65,14 +71,18 @@ export async function POST(request: Request) {
         total_sessions: Number(total_sessions),
         price: Number(price),
         validity_days: validity_days ? Number(validity_days) : null,
-        active: true, // Garante que nasce ativo
+        active: true,
         organization_id: admin.organizationId,
       },
     });
 
     return NextResponse.json({
       success: true,
-      template,
+      // 🔥 Também sanitizamos aqui para manter a consistência
+      template: {
+        ...template,
+        price: Number(template.price),
+      },
     });
   } catch (error) {
     console.error("Erro ao criar template:", error);

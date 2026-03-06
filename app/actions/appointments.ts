@@ -85,8 +85,7 @@ export async function createAppointment(
   }
 }
 
-// --- NOVO: Ação de Atualizar (Para o Modal de Detalhes) ---
-// --- Ação de Atualizar (Versão Inteligente) ---
+// --- Ação de Atualizar (Versão Sanitizada contra erro de Decimal) ---
 export async function updateAppointment(
   id: string,
   data: {
@@ -99,17 +98,15 @@ export async function updateAppointment(
   try {
     const admin = await requireAuth();
 
-    // 1. Mapeamento Robusto de Status
     const statusMap: Record<string, AppointmentStatus> = {
       a_confirmar: AppointmentStatus.PENDENTE,
       confirmado: AppointmentStatus.CONFIRMADO,
       atrasou: AppointmentStatus.PENDENTE,
-      nao_compareceu: AppointmentStatus.CANCELADO, // Corrigido sem acento para bater com o Select
+      nao_compareceu: AppointmentStatus.CANCELADO,
       cancelado: AppointmentStatus.CANCELADO,
       realizado: AppointmentStatus.REALIZADO,
     };
 
-    // 2. Mapeamento de Pagamento
     const paymentMap: Record<string, PaymentMethod> = {
       pix: PaymentMethod.PIX,
       dinheiro: PaymentMethod.DINHEIRO,
@@ -124,8 +121,6 @@ export async function updateAppointment(
         ? null
         : paymentMap[data.paymentMethod] || null;
 
-    // 3. REGRA DE NEGÓCIO: Se houver pagamento ou for pacote, não há cobrança ativa (has_charge = false)
-    // Se o status for Realizado e tiver método de pagamento, entendemos que foi pago.
     let finalHasCharge = data.hasCharge;
     if (
       finalStatus === AppointmentStatus.REALIZADO &&
@@ -134,7 +129,6 @@ export async function updateAppointment(
       finalHasCharge = false;
     }
 
-    // Se for cancelado, também removemos a "cobrança ativa" para não sujar o financeiro
     if (finalStatus === AppointmentStatus.CANCELADO) {
       finalHasCharge = false;
     }
@@ -151,12 +145,26 @@ export async function updateAppointment(
         has_charge: finalHasCharge,
       },
       include: {
-        service: true, // Incluímos para o revalidate ter o contexto do preço se necessário
+        service: true,
       },
     });
 
+    // 🔥 O PULO DO GATO: Serialização manual para o Next.js não dar erro
+    // Transformamos o objeto do Prisma em um objeto puro (Plain Object)
+    const sanitizedAppointment = {
+      ...updated,
+      service: {
+        ...updated.service,
+        price: Number(updated.service.price), // <-- Converte Decimal para Number aqui
+      },
+    };
+
     revalidatePath("/admin/agenda");
-    return { success: true, appointment: updated };
+
+    return {
+      success: true,
+      appointment: sanitizedAppointment, // Agora o frontend vai aceitar!
+    };
   } catch (error) {
     console.error("Erro ao atualizar agendamento:", error);
     return { success: false, error: "Erro ao salvar alterações." };
