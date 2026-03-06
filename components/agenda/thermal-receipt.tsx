@@ -14,9 +14,13 @@ export const ThermalReceipt = forwardRef<HTMLDivElement, ThermalReceiptProps>(
 
     const today = new Date();
 
-    // 🔥 BUSCA ROBUSTA DO PREÇO
-    // Tenta pegar o preço direto, ou do serviço, garantindo que seja um número
-    const rawPrice = appointment.price ?? appointment.service?.price ?? 0;
+    // 🔥 BUSCA DE PREÇO MELHORADA (Prioriza Pacote > Valor da Sessão > Serviço Base)
+    const rawPrice =
+      appointment.package?.price ??
+      appointment.price ??
+      appointment.service?.price ??
+      0;
+
     const priceValue = Number(rawPrice);
 
     const formattedPrice = new Intl.NumberFormat("pt-BR", {
@@ -24,17 +28,16 @@ export const ThermalReceipt = forwardRef<HTMLDivElement, ThermalReceiptProps>(
       currency: "BRL",
     }).format(priceValue);
 
-    // Identifica se é pacote para o rodapé do valor
     const isPackage = !!appointment.packageId;
 
     return (
       <div className="hidden print:block">
         <div
           ref={ref}
-          className="w-[80mm] p-5 bg-white text-black font-mono text-[12px] leading-tight mx-auto"
+          className="w-[80mm] p-5 bg-white text-black font-mono text-[11px] leading-tight mx-auto"
           style={{ color: "#000" }}
         >
-          {/* Cabeçalho da Clínica */}
+          {/* Cabeçalho */}
           <div className="text-center mb-4">
             <h2 className="text-sm font-bold uppercase mb-1">
               {settings?.trade_name ||
@@ -45,85 +48,82 @@ export const ThermalReceipt = forwardRef<HTMLDivElement, ThermalReceiptProps>(
               <p className="text-[10px]">Whats: {settings.phone_whatsapp}</p>
             )}
             <div className="border-b border-black border-dashed my-2" />
-            <p className="font-bold text-[13px] uppercase">
-              *** RECIBO DE ATENDIMENTO ***
-            </p>
+            <p className="font-bold text-[12px] uppercase">*** RECIBO ***</p>
           </div>
 
-          {/* Identificação do Atendimento */}
-          <div className="space-y-1 mb-4">
+          {/* Dados do Cliente */}
+          <div className="space-y-1 mb-3">
             <p className="truncate">
-              CLIENTE:{" "}
-              {appointment.clientName?.toUpperCase() || "CLIENTE NÃO INFORMADO"}
+              CLIENTE: {appointment.clientName?.toUpperCase()}
             </p>
-            <p>DATA: {format(today, "dd/MM/yyyy")}</p>
-            <p>HORA: {format(today, "HH:mm:ss")}</p>
-            <p>PROFISSIONAL: {settings?.responsible_name || "---"}</p>
+            <p>
+              DATA: {format(today, "dd/MM/yyyy")} - {format(today, "HH:mm")}
+            </p>
           </div>
 
           <div className="border-b border-black border-dashed my-2" />
 
-          {/* Detalhes do Serviço */}
-          <table className="w-full mb-4">
+          {/* Itens */}
+          <table className="w-full mb-3">
             <thead>
-              <tr className="text-left font-bold">
-                <td>DESCRIÇÃO</td>
-                <td className="text-right">VALOR</td>
+              <tr className="text-left font-bold border-b border-black">
+                <td className="pb-1">DESCRIÇÃO</td>
+                <td className="text-right pb-1">VALOR</td>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td className="pt-2">
                   <p className="font-bold">{appointment.service}</p>
-                  <p className="text-[10px] italic">
+                  <p className="text-[9px] italic">
                     {appointment.sessionInfo || "Sessão Avulsa"}
                   </p>
                 </td>
                 <td className="text-right align-top pt-2">
-                  {isPackage ? "COBERTO" : formattedPrice}
+                  {isPackage ? "PACOTE" : formattedPrice}
                 </td>
               </tr>
             </tbody>
           </table>
 
-          <div className="border-b border-black border-dashed my-2" />
-
-          {/* Totalizador */}
-          <div className="flex justify-between items-center text-[14px] font-bold mb-2">
-            <span>TOTAL DO SERVIÇO:</span>
-            <span>{formattedPrice}</span>
-          </div>
-
-          {isPackage && (
-            <div className="text-right text-[10px] italic mb-4">
-              * Pago via Pacote de Sessões
+          {/* 🔥 OBSERVAÇÕES (Adicionado aqui) */}
+          {appointment.observations && (
+            <div className="mb-3 p-2 border border-black border-dotted rounded">
+              <p className="font-bold text-[9px] mb-1 uppercase">
+                Observações:
+              </p>
+              <p className="text-[9px] italic leading-snug">
+                {appointment.observations}
+              </p>
             </div>
           )}
 
-          <div className="flex justify-between items-center text-[14px] font-bold mb-6 pt-2 border-t border-black">
-            <span>VALOR PAGO HOJE:</span>
-            <span>{isPackage ? "R$ 0,00" : formattedPrice}</span>
+          <div className="border-b border-black border-dashed my-2" />
+
+          {/* Totais */}
+          <div className="flex justify-between items-center text-[12px] font-bold">
+            <span>TOTAL:</span>
+            <span>{formattedPrice}</span>
           </div>
 
-          {/* Rodapé e Assinatura */}
-          <div className="text-center space-y-4">
-            <p className="text-[10px]">
-              Este documento não possui valor fiscal.
+          <div className="flex justify-between items-center text-[11px] mt-1">
+            <span>VALOR PAGO HOJE:</span>
+            <span className="font-bold">
+              {isPackage ? "R$ 0,00" : formattedPrice}
+            </span>
+          </div>
+
+          {/* Assinatura e Rodapé */}
+          <div className="text-center mt-8">
+            <div className="border-t border-black w-3/4 mx-auto mb-1" />
+            <p className="text-[9px] uppercase">
+              {settings?.trade_name || "Assinatura"}
             </p>
 
-            <div className="mt-8 pt-4">
-              <p className="mb-0">__________________________</p>
-              <p className="text-[10px] uppercase">
-                {settings?.trade_name || "Assinatura do Responsável"}
-              </p>
-            </div>
-
-            <div className="pt-4 pb-2">
-              <p className="text-[10px] italic">
-                Obrigado pela confiança! 💆‍♀️✨
-              </p>
-              <p className="text-[8px] mt-2 opacity-50 italic">totten.com.br</p>
-            </div>
+            <p className="text-[9px] mt-6 italic">
+              Obrigado pela confiança! ✨
+            </p>
+            <p className="text-[7px] mt-2 opacity-40">totten.com.br</p>
           </div>
         </div>
       </div>

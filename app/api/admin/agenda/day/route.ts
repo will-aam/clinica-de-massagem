@@ -65,7 +65,8 @@ export async function GET(req: NextRequest) {
         sessionInfo = `Sessão ${current} de ${appt.package.total_sessions}`;
       }
 
-      const hasCharge = appt.has_charge;
+      // 🔥 AJUSTE AQUI: Pegando o preço real (Pacote ou Serviço)
+      const rawPrice = appt.package?.price ?? appt.service.price ?? 0;
 
       let color = "bg-blue-100 border-blue-300 text-blue-900";
       if (appt.package_id) {
@@ -85,9 +86,13 @@ export async function GET(req: NextRequest) {
         isRecurring: Boolean(appt.package_id),
         phone: appt.client.phone_whatsapp,
         color,
-        hasCharge,
+        hasCharge: appt.has_charge,
         status: appt.status,
         checkInTime: appt.check_in?.date_time ?? null,
+        observations: appt.observations ?? "",
+        paymentMethod: appt.payment_method ?? "nenhum",
+        price: Number(rawPrice), // Converte Decimal para Number
+        packageId: appt.package_id,
       };
     });
 
