@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
+import Link from "next/link";
 import { AdminHeader } from "@/components/admin-header";
 import {
   Card,
@@ -12,22 +13,10 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   CalendarCheck,
   Users,
   AlertTriangle,
   Clock,
-  MoreVertical,
-  User,
-  MessageCircle,
-  XCircle,
   ArrowUp,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -84,9 +73,7 @@ function KpiCard({
   );
 }
 
-// 3. Componente de Item de Lista (Com o Menu Dropdown)
-import Link from "next/link"; // Adicione este import no topo
-
+// 3. Componente de Item de Lista (Sem Dropdown, avatar e nome são links)
 function CheckInListItem({ checkIn }: { checkIn: CheckIn }) {
   const date = new Date(checkIn.date_time);
   const formattedDate = date.toLocaleDateString("pt-BR", {
@@ -97,61 +84,37 @@ function CheckInListItem({ checkIn }: { checkIn: CheckIn }) {
     hour: "2-digit",
     minute: "2-digit",
   });
-  const initial = checkIn.client_name.charAt(0).toUpperCase();
+
+  // Se o nome vier vazio por algum motivo, garante que não quebre ao pegar o charAt(0)
+  const initial = checkIn.client_name
+    ? checkIn.client_name.charAt(0).toUpperCase()
+    : "?";
 
   return (
     <div className="flex items-center justify-between py-3 md:py-4 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors px-2 -mx-2 rounded-lg group">
-      <div className="flex items-center gap-3 md:gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold shadow-sm border border-primary/20">
+      {/* 🔥 Todo esse bloco da esquerda agora é um link clicável */}
+      <Link
+        href={checkIn.client_id ? `/admin/clients/${checkIn.client_id}` : "#"}
+        className="flex items-center gap-3 md:gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold shadow-sm border border-primary/20 transition-transform group-hover:scale-105">
           {initial}
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground leading-none mb-1.5">
+          <span className="text-sm font-semibold text-foreground leading-none mb-1.5 group-hover:text-primary group-hover:underline transition-colors">
             {checkIn.client_name}
           </span>
           <span className="text-xs text-muted-foreground leading-none">
             {formattedDate}
           </span>
         </div>
-      </div>
+      </Link>
 
+      {/* O horário continua não clicável na direita */}
       <div className="flex items-center gap-2">
         <span className="text-sm font-medium text-foreground bg-muted px-2 py-1 rounded-md">
           {formattedTime}
         </span>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger className="p-2 outline-none rounded-full hover:bg-muted transition-colors">
-            <MoreVertical className="h-4 w-4 text-muted-foreground" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuLabel className="text-xs text-muted-foreground uppercase tracking-wider">
-              Ações
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-
-            {/* LINK PARA O PERFIL AQUI */}
-            <DropdownMenuItem asChild>
-              <Link
-                href={`/admin/clients/${checkIn.client_id}`}
-                className="flex cursor-pointer items-center gap-2 w-full"
-              >
-                <User className="h-4 w-4" />
-                <span>Ver Perfil</span>
-              </Link>
-            </DropdownMenuItem>
-
-            <DropdownMenuItem className="cursor-pointer gap-2">
-              <MessageCircle className="h-4 w-4" />
-              <span>Enviar WhatsApp</span>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="cursor-pointer gap-2 text-destructive focus:text-destructive focus:bg-destructive/10">
-              <XCircle className="h-4 w-4" />
-              <span>Cancelar Check-in</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
@@ -163,12 +126,10 @@ export default function AdminDashboardPage() {
     refreshInterval: 15000,
   });
 
-  // Estado e Efeito para o Botão "Voltar ao Topo"
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      // Se rolou mais de 200 pixels para baixo, mostra o botão
       setShowScrollTop(window.scrollY > 200);
     };
 
@@ -184,7 +145,6 @@ export default function AdminDashboardPage() {
     <>
       <AdminHeader title="Dashboard" />
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto w-full pb-24 md:pb-6 relative">
-        {/* Carrossel de KPIs */}
         <div className="flex overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory scroll-smooth md:grid md:grid-cols-3 md:overflow-visible md:pb-0 md:px-0 md:mx-0 gap-4 [&::-webkit-scrollbar]:hidden">
           {isLoading ? (
             <>
@@ -221,15 +181,14 @@ export default function AdminDashboardPage() {
 
         <PendingCheckInsCard />
 
-        {/* Check-ins Recentes */}
         <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card mt-2 md:mt-0">
           <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
             <CardTitle className="flex items-center gap-2 text-card-foreground">
               <Clock className="h-5 w-5 text-primary" />
-              Check-ins Recentes
+              Check-ins de Hoje
             </CardTitle>
             <CardDescription>
-              Os últimos registros de presença no totten
+              Os últimos registros de presença contabilizados hoje
             </CardDescription>
           </CardHeader>
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6">
@@ -249,7 +208,7 @@ export default function AdminDashboardPage() {
               <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-lg border border-dashed border-border">
                 <CalendarCheck className="h-10 w-10 text-muted-foreground/40" />
                 <p className="mt-4 text-sm font-medium text-muted-foreground">
-                  Nenhum check-in registrado ainda.
+                  Nenhum check-in registrado hoje.
                 </p>
               </div>
             ) : (
@@ -263,7 +222,6 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* BOTÃO VOLTAR AO TOPO FLUTUANTE */}
       <button
         onClick={scrollToTop}
         className={cn(

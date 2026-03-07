@@ -68,94 +68,96 @@ function LoginForm() {
   };
 
   return (
-    <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-12 sm:px-6">
+    <div className="flex min-h-svh flex-col bg-background p-4 sm:p-8 overflow-hidden">
+      {/* 🔥 BOTÃO DE VOLTAR - Mesma lógica do Check-in */}
       <Link
         href="/totem/idle"
-        className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
+        className="absolute top-4 left-4 sm:static sm:self-start flex w-fit items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
       >
         <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-transparent sm:bg-muted/50 hover:bg-muted transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </div>
-        <span className="hidden sm:inline font-medium">
-          Voltar para a Recepção
-        </span>
+        <span className="hidden sm:inline font-medium">Voltar</span>
       </Link>
 
-      <div className="w-full max-w-sm mt-8 sm:mt-0">
-        <div className="text-center mb-10">
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
-            <Bird className="h-8 w-8" />
-          </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-foreground mb-3">
-            Totten
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground">
-            Acesse o painel administrativo
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="email" className="text-base sm:text-sm">
-              E-mail
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="admin@empresa.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              disabled={loading}
-              className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
-            />
+      {/* 🔥 CONTEÚDO CENTRALIZADO - O flex-1 segura a altura e impede scroll inútil */}
+      <div className="flex flex-1 items-center justify-center w-full">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-10">
+            <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+              <Bird className="h-8 w-8" />
+            </div>
+            <h1 className="font-serif text-3xl sm:text-4xl text-foreground mb-3">
+              Totten
+            </h1>
+            <p className="text-base sm:text-lg text-muted-foreground">
+              Acesse o painel administrativo
+            </p>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="password" className="text-base sm:text-sm">
-                Senha
+          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email" className="text-base sm:text-sm">
+                E-mail
               </Label>
-              <Link
-                href="/admin/forgot-password"
-                className="text-sm sm:text-xs text-primary hover:underline font-medium"
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@empresa.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-base sm:text-sm">
+                  Senha
+                </Label>
+                <Link
+                  href="/admin/forgot-password"
+                  className="text-sm sm:text-xs text-primary hover:underline font-medium"
+                >
+                  Esqueceu a senha?
+                </Link>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Sua senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+              />
+            </div>
+
+            <div className="pt-2">
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full h-14 sm:h-12 text-lg sm:text-base rounded-xl transition-all hover:scale-[1.02] shadow-md"
+                disabled={loading}
               >
-                Esqueceu a senha?
+                {loading ? "Entrando..." : "Entrar"}
+              </Button>
+            </div>
+
+            <div className="text-center text-base sm:text-sm text-muted-foreground">
+              Ainda não tem uma conta?{" "}
+              <Link
+                href="/register"
+                className="font-semibold text-primary hover:underline"
+              >
+                Crie uma conta
               </Link>
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Sua senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              disabled={loading}
-              className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
-            />
-          </div>
-
-          <div className="pt-2">
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full h-14 sm:h-12 text-lg sm:text-base rounded-xl transition-all hover:scale-[1.02] shadow-md"
-              disabled={loading}
-            >
-              {loading ? "Entrando..." : "Entrar"}
-            </Button>
-          </div>
-
-          <div className="text-center text-base sm:text-sm text-muted-foreground">
-            Ainda não tem uma conta?{" "}
-            <Link
-              href="/register"
-              className="font-semibold text-primary hover:underline"
-            >
-              Crie uma conta
-            </Link>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   );

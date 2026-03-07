@@ -1,4 +1,3 @@
-// app/admin/clients/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -17,14 +16,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Users, Eye, ChevronRight, User } from "lucide-react";
-import type { Client } from "@/lib/data";
+import { Plus, Search, Users, Eye, ChevronRight } from "lucide-react";
+
+// 🔥 Tipo atualizado para receber o nome do pacote
+type Client = {
+  id: string;
+  name: string;
+  cpf: string;
+  phone_whatsapp: string;
+  activePackageName?: string | null;
+};
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const ITEMS_PER_PAGE = 5;
 
-// COMPONENTE: Item da Lista para Mobile (Estilo Agenda do iPhone)
+// COMPONENTE: Item da Lista para Mobile
 function ClientMobileItem({ client }: { client: Client }) {
   const initial = client.name.charAt(0).toUpperCase();
 
@@ -34,12 +41,11 @@ function ClientMobileItem({ client }: { client: Client }) {
       className="flex items-center justify-between py-3 px-2 -mx-2 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors active:scale-[0.98]"
     >
       <div className="flex items-center gap-3">
-        {/* Avatar */}
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold shadow-sm border border-primary/20">
           {initial}
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-foreground leading-none mb-1.5">
+          <span className="text-sm font-semibold text-foreground leading-none mb-1.5 flex items-center gap-1.5">
             {client.name}
           </span>
           <span className="text-xs text-muted-foreground leading-none font-mono">
@@ -47,8 +53,14 @@ function ClientMobileItem({ client }: { client: Client }) {
           </span>
         </div>
       </div>
-      <div className="flex items-center text-muted-foreground/50">
-        <ChevronRight className="h-5 w-5" />
+      <div className="flex items-center gap-2 text-muted-foreground/50">
+        {/* 🔥 Nome do pacote no mobile em uma tag discreta e truncada */}
+        {client.activePackageName && (
+          <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md truncate max-w-25">
+            {client.activePackageName}
+          </span>
+        )}
+        <ChevronRight className="h-5 w-5 shrink-0" />
       </div>
     </Link>
   );
@@ -62,11 +74,14 @@ export default function AdminClientsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const filtered = (clients || []).filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.cpf.includes(search),
-  );
+  const filtered = (clients || []).filter((c) => {
+    const term = search.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(term) ||
+      c.cpf.includes(term) ||
+      (c.phone_whatsapp && c.phone_whatsapp.includes(term))
+    );
+  });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated = filtered.slice(
@@ -78,18 +93,17 @@ export default function AdminClientsPage() {
     <>
       <AdminHeader title="Clientes" />
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto w-full pb-24 md:pb-6">
-        {/* Barra de Busca e Botão de Novo Cliente */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome ou CPF..."
+              placeholder="Buscar por nome, CPF ou telefone..."
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="bg-card pl-10 text-foreground rounded-full md:rounded-md shadow-sm border-border" // Arredondado no mobile
+              className="bg-card pl-10 text-foreground rounded-full md:rounded-md shadow-sm border-border"
             />
           </div>
           <Button
@@ -103,7 +117,6 @@ export default function AdminClientsPage() {
           </Button>
         </div>
 
-        {/* Card Principal - Sem borda no celular, com borda no PC */}
         <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
           <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
             <CardTitle className="flex items-center gap-2 text-card-foreground">
@@ -147,14 +160,12 @@ export default function AdminClientsPage() {
               </div>
             ) : (
               <>
-                {/* VISÃO MOBILE: Lista Nativa (Escondida no PC) */}
                 <div className="flex flex-col md:hidden">
                   {paginated.map((client) => (
                     <ClientMobileItem key={client.id} client={client} />
                   ))}
                 </div>
 
-                {/* VISÃO DESKTOP: Tabela Tradicional (Escondida no Celular) */}
                 <div className="hidden md:block overflow-x-auto rounded-md border border-border">
                   <Table>
                     <TableHeader className="bg-muted/50">
@@ -168,7 +179,10 @@ export default function AdminClientsPage() {
                         <TableHead className="text-muted-foreground font-semibold">
                           WhatsApp
                         </TableHead>
-                        <TableHead className="text-right text-muted-foreground font-semibold">
+                        <TableHead className="text-center text-muted-foreground font-semibold">
+                          Plano / Pacote
+                        </TableHead>
+                        <TableHead className="text-center text-muted-foreground font-semibold w-24">
                           Ações
                         </TableHead>
                       </TableRow>
@@ -177,7 +191,7 @@ export default function AdminClientsPage() {
                       {paginated.map((client) => (
                         <TableRow
                           key={client.id}
-                          className="hover:bg-muted/30 transition-colors group"
+                          className="hover:bg-muted/30 transition-colors"
                         >
                           <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-3">
@@ -193,18 +207,28 @@ export default function AdminClientsPage() {
                           <TableCell className="text-muted-foreground">
                             {client.phone_whatsapp}
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              asChild
-                              variant="ghost"
-                              size="sm"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+
+                          {/* 🔥 Nome do pacote no desktop */}
+                          <TableCell className="text-center">
+                            {client.activePackageName ? (
+                              <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-semibold">
+                                {client.activePackageName}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground/50">
+                                -
+                              </span>
+                            )}
+                          </TableCell>
+
+                          <TableCell className="text-center">
+                            <Link
+                              href={`/admin/clients/${client.id}`}
+                              className="inline-flex p-2 text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-full transition-colors active:scale-95"
+                              title="Ver Perfil"
                             >
-                              <Link href={`/admin/clients/${client.id}`}>
-                                <Eye className="mr-2 h-4 w-4" />
-                                Ver Perfil
-                              </Link>
-                            </Button>
+                              <Eye className="h-5 w-5" />
+                            </Link>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -212,7 +236,6 @@ export default function AdminClientsPage() {
                   </Table>
                 </div>
 
-                {/* Paginação */}
                 {totalPages > 1 && (
                   <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border pt-4">
                     <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">

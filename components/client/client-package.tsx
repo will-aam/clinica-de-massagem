@@ -15,6 +15,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Package, Plus, Award, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { Package as PackageType } from "@/lib/data";
@@ -25,8 +32,8 @@ interface PackageTemplate {
   name: string;
   total_sessions: number;
   price: number;
-  service_id: string; // 🔥 Adicionado para a amarração automática
-  active: boolean; // 🔥 Corrigido de is_active para active
+  service_id: string;
+  active: boolean;
 }
 
 interface ClientPackageProps {
@@ -53,7 +60,6 @@ export function ClientPackage({
         const res = await fetch("/api/package-templates?active=true");
         if (res.ok) {
           const data = await res.json();
-          // 🔥 Filtro corrigido para 'active'
           setTemplates(data);
           if (data.length > 0) setTemplateId(data[0].id);
         }
@@ -85,13 +91,12 @@ export function ClientPackage({
 
     setLoading(true);
     try {
-      // 🔥 Rota correta conforme o contrato da sua API
       const res = await fetch("/api/packages/templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           client_id: clientId,
-          service_id: selectedTemplate.service_id, // Vem automático do template
+          service_id: selectedTemplate.service_id,
           total_sessions: Number(selectedTemplate.total_sessions),
           price: Number(selectedTemplate.price),
         }),
@@ -145,20 +150,29 @@ export function ClientPackage({
               <div className="flex flex-col gap-4 py-4">
                 <div className="flex flex-col gap-2">
                   <Label>Plano Disponível</Label>
-                  <select
-                    className="h-11 rounded-xl border border-input bg-background px-3 text-sm focus:ring-2 focus:ring-primary"
+                  {/* 🔥 A Mágica do Shadcn UI acontece aqui */}
+                  <Select
                     value={templateId}
-                    onChange={(e) => setTemplateId(e.target.value)}
+                    onValueChange={setTemplateId}
+                    disabled={templates.length === 0 || loading}
                   >
-                    {templates.length === 0 && (
-                      <option>Nenhum pacote ativo no catálogo</option>
-                    )}
-                    {templates.map((tpl) => (
-                      <option key={tpl.id} value={tpl.id}>
-                        {tpl.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="h-11 rounded-xl">
+                      <SelectValue
+                        placeholder={
+                          templates.length === 0
+                            ? "Nenhum pacote ativo no catálogo"
+                            : "Selecione um plano"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((tpl) => (
+                        <SelectItem key={tpl.id} value={tpl.id}>
+                          {tpl.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {currentTemplate && (
@@ -188,7 +202,7 @@ export function ClientPackage({
               <DialogFooter>
                 <Button
                   onClick={handleAddPackage}
-                  disabled={loading || templates.length === 0}
+                  disabled={loading || templates.length === 0 || !templateId}
                   className="w-full rounded-xl h-11"
                 >
                   {loading ? "Processando..." : "Confirmar Venda"}

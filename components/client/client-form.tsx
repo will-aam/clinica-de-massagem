@@ -60,6 +60,12 @@ function formatPhoneInput(value: string) {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 }
 
+function formatCepInput(value: string) {
+  const d = value.replace(/\D/g, "").slice(0, 8);
+  if (d.length <= 5) return d;
+  return `${d.slice(0, 5)}-${d.slice(5)}`;
+}
+
 function formatCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -73,7 +79,7 @@ type PackageTemplate = {
   total_sessions: number;
   price: number;
   description: string | null;
-  service_id: string; // 🔥 Adicione esta linha aqui
+  service_id: string;
 };
 
 export function ClientForm() {
@@ -134,7 +140,7 @@ export function ClientForm() {
 
     setLoading(true);
     try {
-      // 1. Criar Cliente
+      // 1. Criar Cliente (Enviando também os campos de endereço)
       const clientRes = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -146,6 +152,10 @@ export function ClientForm() {
           birth_date: form.birth_date
             ? format(form.birth_date, "yyyy-MM-dd")
             : null,
+          zip_code: form.zip_code || null,
+          street: form.street || null,
+          number: form.number || null,
+          city: form.city || null,
         }),
       });
 
@@ -165,14 +175,13 @@ export function ClientForm() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               client_id: clientData.client.id,
-              service_id: template.service_id, // 🔥 O PULO DO GATO: Enviando o ID do SERVIÇO real
+              service_id: template.service_id,
               total_sessions: Number(template.total_sessions),
               price: Number(template.price),
             }),
           });
 
           if (!packageRes.ok) {
-            // Tenta capturar o erro real da API
             const errorText = await packageRes.text();
             console.error("Erro detalhado da API de Pacotes:", errorText);
             throw new Error(
@@ -237,6 +246,11 @@ export function ClientForm() {
                     placeholder="(00) 00000-0000"
                     className="h-11 bg-muted/30"
                   />
+                  {errors.phone_whatsapp && (
+                    <p className="text-xs text-destructive">
+                      {errors.phone_whatsapp}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
@@ -250,6 +264,9 @@ export function ClientForm() {
                     placeholder="000.000.000-00"
                     className="h-11 bg-muted/30 font-mono"
                   />
+                  {errors.cpf && (
+                    <p className="text-xs text-destructive">{errors.cpf}</p>
+                  )}
                 </div>
               </div>
 
@@ -277,7 +294,8 @@ export function ClientForm() {
                     />
                   </Button>
                 </CollapsibleTrigger>
-                <CollapsibleContent className="pt-4 space-y-4">
+                <CollapsibleContent className="pt-4 space-y-6">
+                  {/* Seção Contato/Nascimento */}
                   <div className="grid sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Nascimento</Label>
@@ -290,7 +308,7 @@ export function ClientForm() {
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {form.birth_date
                               ? format(form.birth_date, "dd/MM/yyyy")
-                              : "Selecionar"}
+                              : "Selecionar data"}
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent className="p-0 w-auto">
@@ -301,7 +319,7 @@ export function ClientForm() {
                               setForm({ ...form, birth_date: d })
                             }
                             locale={ptBR}
-                            captionLayout="dropdown" // 🔥 Corrigido aqui para evitar o erro de TS
+                            captionLayout="dropdown"
                             fromYear={1930}
                             toYear={new Date().getFullYear()}
                           />
@@ -318,6 +336,65 @@ export function ClientForm() {
                         placeholder="email@exemplo.com"
                         className="h-11 bg-muted/30"
                       />
+                    </div>
+                  </div>
+
+                  {/* 🔥 Nova Seção: Endereço */}
+                  <div className="space-y-4 border-t pt-4">
+                    <h4 className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
+                      <MapPin className="h-4 w-4" /> Endereço
+                    </h4>
+
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <div className="space-y-2 sm:col-span-1">
+                        <Label>CEP</Label>
+                        <Input
+                          value={form.zip_code}
+                          onChange={(e) =>
+                            setForm({
+                              ...form,
+                              zip_code: formatCepInput(e.target.value),
+                            })
+                          }
+                          placeholder="00000-000"
+                          className="h-11 bg-muted/30 font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>Cidade</Label>
+                        <Input
+                          value={form.city}
+                          onChange={(e) =>
+                            setForm({ ...form, city: e.target.value })
+                          }
+                          className="h-11 bg-muted/30"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid sm:grid-cols-3 gap-4">
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label>Rua / Logradouro</Label>
+                        <Input
+                          value={form.street}
+                          onChange={(e) =>
+                            setForm({ ...form, street: e.target.value })
+                          }
+                          placeholder="Ex: Avenida Beira Mar"
+                          className="h-11 bg-muted/30"
+                        />
+                      </div>
+                      <div className="space-y-2 sm:col-span-1">
+                        <Label>Número</Label>
+                        <Input
+                          value={form.number}
+                          onChange={(e) =>
+                            setForm({ ...form, number: e.target.value })
+                          }
+                          placeholder="Ex: 123"
+                          className="h-11 bg-muted/30"
+                        />
+                      </div>
                     </div>
                   </div>
                 </CollapsibleContent>
@@ -343,7 +420,7 @@ export function ClientForm() {
                     setForm({ ...form, package_template_id: v })
                   }
                 >
-                  <SelectTrigger className="h-11">
+                  <SelectTrigger className="h-11 bg-muted/30">
                     <SelectValue placeholder="Selecione um pacote..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -372,7 +449,7 @@ export function ClientForm() {
                         {selectedTemplate.total_sessions} sessões
                       </span>
                     </div>
-                    <div className="flex justify-between text-xs text-muted-foreground border-t pt-2 mt-2">
+                    <div className="flex justify-between text-xs text-muted-foreground border-t border-primary/10 pt-2 mt-2">
                       <span>Valor do Pacote:</span>
                       <span className="text-lg font-black text-primary">
                         {formatCurrency(Number(selectedTemplate.price))}

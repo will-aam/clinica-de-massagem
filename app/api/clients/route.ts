@@ -26,10 +26,38 @@ export async function GET() {
         email: true,
         birth_date: true,
         created_at: true,
+        packages: {
+          where: { active: true },
+          select: {
+            id: true,
+            name: true, // 🔥 Agora pedimos o nome do pacote ao banco!
+            used_sessions: true,
+            total_sessions: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(clients);
+    const formattedClients = clients.map((client) => {
+      // Procura o primeiro pacote que ainda tem sessões sobrando
+      const activePkg = client.packages.find(
+        (pkg) => pkg.used_sessions < pkg.total_sessions,
+      );
+
+      return {
+        id: client.id,
+        name: client.name,
+        cpf: client.cpf,
+        phone_whatsapp: client.phone_whatsapp,
+        email: client.email,
+        birth_date: client.birth_date,
+        created_at: client.created_at,
+        // 🔥 Enviamos o NOME do pacote (ou nulo se não tiver pacote com sessão sobrando)
+        activePackageName: activePkg ? activePkg.name : null,
+      };
+    });
+
+    return NextResponse.json(formattedClients);
   } catch (error) {
     console.error("Erro ao buscar clientes:", error);
     return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
@@ -58,7 +86,6 @@ export async function POST(request: Request) {
       number,
     } = body;
 
-    // Validações básicas
     if (!name || !cpf || !phone_whatsapp) {
       return NextResponse.json(
         { error: "Nome, CPF e WhatsApp são obrigatórios" },
@@ -66,7 +93,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verifica se o CPF já existe nesta organização
     const existingClient = await prisma.client.findUnique({
       where: {
         cpf_organization_id: {
@@ -83,7 +109,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Cria o cliente
     const client = await prisma.client.create({
       data: {
         name,

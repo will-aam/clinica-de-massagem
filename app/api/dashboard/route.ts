@@ -56,10 +56,14 @@ export async function GET() {
         pkg.total_sessions - pkg.used_sessions > 0,
     ).length;
 
-    // 4. Check-ins recentes (últimos 10)
+    // 4. Check-ins de HOJE (últimos 10 limitados pelo dia de hoje)
     const recentCheckIns = await prisma.checkIn.findMany({
       where: {
         organization_id: admin.organizationId,
+        date_time: {
+          gte: today, // 🔥 Restringe para apenas mostrar check-ins de hoje em diante
+          lt: tomorrow,
+        },
       },
       include: {
         client: {
@@ -75,10 +79,11 @@ export async function GET() {
       take: 10,
     });
 
+    // 🔥 Correção do erro de TypeScript: Usando "?." para lidar com casos nulos
     const formattedCheckIns = recentCheckIns.map((checkIn) => ({
       id: checkIn.id,
-      client_id: checkIn.client.id,
-      client_name: checkIn.client.name,
+      client_id: checkIn.client?.id ?? "",
+      client_name: checkIn.client?.name ?? "Cliente Avulso",
       date_time: checkIn.date_time,
     }));
 
