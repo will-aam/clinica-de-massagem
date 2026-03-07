@@ -1,4 +1,3 @@
-// components/client/client-contact.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -6,17 +5,6 @@ import { mutate } from "swr";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,12 +16,12 @@ import {
 import {
   MessageCircle,
   Mail,
-  Trash2,
   Pencil,
   Check,
   X,
   Loader2,
   Share2,
+  UserX, // 🔥 Novo ícone para "Inativar Cliente"
 } from "lucide-react";
 import { toast } from "sonner";
 import type { Client as ClientType, Package as PackageType } from "@/lib/data";
@@ -58,7 +46,6 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
   const [editPhone, setEditPhone] = useState(client.phone_whatsapp || "");
   const [editEmail, setEditEmail] = useState(clientEmail);
 
-  // --- LÓGICA DAS MENSAGENS DE WHATSAPP ---
   const [templates, setTemplates] = useState({
     msgUpdate:
       "Olá, {nome}! Tudo bem? 💆‍♀️✨\n\nPassando para avisar que seu check-in foi registrado.",
@@ -82,18 +69,17 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
   }, []);
 
   const handleSave = async () => {
+    // 🔥 VALIDAÇÕES RÍGIDAS AQUI
     const cleanPhone = editPhone.replace(/\D/g, "");
-    const isPhoneValid = cleanPhone.length === 10 || cleanPhone.length === 11;
-    const isEmailValid =
-      !editEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail);
-
-    if (!isPhoneValid) {
-      toast.error("Telefone inválido. Informe DDD + número.");
+    if (cleanPhone.length < 10) {
+      toast.error("O WhatsApp é obrigatório. Informe DDD + número.");
       return;
     }
 
+    const isEmailValid =
+      !editEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editEmail);
     if (!isEmailValid) {
-      toast.error("E-mail inválido.");
+      toast.error("O E-mail inserido é inválido.");
       return;
     }
 
@@ -196,39 +182,21 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
                 size="icon"
                 variant="ghost"
                 className="text-muted-foreground hover:text-primary rounded-full h-8 w-8"
+                title="Editar contato"
               >
                 <Pencil className="h-4 w-4" />
               </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="text-muted-foreground hover:text-destructive rounded-full h-8 w-8"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Excluir Cliente</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Tem certeza? Esta ação não pode ser desfeita.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => {
-                        /* função delete */
-                      }}
-                      className="bg-destructive text-white"
-                    >
-                      Excluir
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+
+              {/* 🔥 Botão de Inativar Cliente (Estático / Desabilitado por enquanto) */}
+              <Button
+                size="icon"
+                variant="ghost"
+                disabled
+                className="text-muted-foreground/40 rounded-full h-8 w-8 cursor-not-allowed"
+                title="Desativar Cliente (Em breve)"
+              >
+                <UserX className="h-4 w-4" />
+              </Button>
             </>
           )}
         </div>

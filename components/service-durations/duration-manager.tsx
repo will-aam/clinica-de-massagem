@@ -20,17 +20,29 @@ type Duration = {
   minutes: number;
 };
 
+// Movida para fora para poder ser usada dentro do onChange
+const formatDuration = (minutes: number) => {
+  if (minutes < 60) return `${minutes}min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
+};
+
 export function DurationManager() {
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
   const [durations, setDurations] = useState<Duration[]>([]);
+
   const [form, setForm] = useState({
     label: "",
     hours: "",
     minutes: "",
   });
 
-  // Busca durações existentes
+  // 🔥 Estado que controla se o usuário digitou um nome manualmente
+  const [isCustomLabel, setIsCustomLabel] = useState(false);
+
   useEffect(() => {
     fetchDurations();
   }, []);
@@ -53,6 +65,23 @@ export function DurationManager() {
     const h = Number(form.hours) || 0;
     const m = Number(form.minutes) || 0;
     return h * 60 + m;
+  };
+
+  // 🔥 Função que atualiza o tempo e auto-preenche o nome
+  const handleTimeChange = (field: "hours" | "minutes", value: string) => {
+    setForm((prev) => {
+      const newForm = { ...prev, [field]: value };
+      const h = Number(newForm.hours) || 0;
+      const m = Number(newForm.minutes) || 0;
+      const total = h * 60 + m;
+
+      // Se o usuário não personalizou o nome, auto-preenchemos
+      if (!isCustomLabel) {
+        newForm.label = total > 0 ? formatDuration(total) : "";
+      }
+
+      return newForm;
+    });
   };
 
   const handleAdd = async () => {
@@ -84,7 +113,9 @@ export function DurationManager() {
 
       if (res.ok && data.success) {
         toast.success("Duração cadastrada!");
+        // 🔥 Reseta o formulário e a trava de personalização
         setForm({ label: "", hours: "", minutes: "" });
+        setIsCustomLabel(false);
         fetchDurations();
       } else {
         toast.error(data.error || "Erro ao cadastrar");
@@ -117,14 +148,6 @@ export function DurationManager() {
     }
   };
 
-  const formatDuration = (minutes: number) => {
-    if (minutes < 60) return `${minutes}min`;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
-    if (m === 0) return `${h}h`;
-    return `${h}h ${m}min`;
-  };
-
   if (loadingData) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -135,7 +158,6 @@ export function DurationManager() {
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Card de Cadastro */}
       <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card">
         <CardHeader className="px-0 pt-0 md:pt-6 md:px-6 pb-4">
           <CardTitle className="text-lg flex items-center gap-2 text-foreground">
@@ -153,9 +175,12 @@ export function DurationManager() {
                 Nome da Duração
               </Label>
               <Input
-                placeholder="Ex: 1 hora e 30 minutos"
+                placeholder="Ex: 1h 30min"
                 value={form.label}
-                onChange={(e) => setForm({ ...form, label: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, label: e.target.value });
+                  setIsCustomLabel(true); // Trava o auto-preenchimento ao digitar aqui
+                }}
                 className="bg-muted/50 border-border/50 h-11"
               />
             </div>
@@ -167,8 +192,9 @@ export function DurationManager() {
                 max="12"
                 placeholder="0"
                 value={form.hours}
-                onChange={(e) => setForm({ ...form, hours: e.target.value })}
-                className="bg-muted/50 border-border/50 h-11"
+                onChange={(e) => handleTimeChange("hours", e.target.value)}
+                // 🔥 Classes adicionadas para remover as setas nativas do input number
+                className="bg-muted/50 border-border/50 h-11 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
               />
             </div>
             <div className="flex flex-col gap-2">
@@ -180,13 +206,14 @@ export function DurationManager() {
                 step="5"
                 placeholder="0"
                 value={form.minutes}
-                onChange={(e) => setForm({ ...form, minutes: e.target.value })}
-                className="bg-muted/50 border-border/50 h-11"
+                onChange={(e) => handleTimeChange("minutes", e.target.value)}
+                // 🔥 Classes adicionadas para remover as setas nativas do input number
+                className="bg-muted/50 border-border/50 h-11 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
               />
             </div>
           </div>
 
-          {/* Preview */}
+          {/* Preview da Duração Total (Mantido como solicitado, mas agora o nome copia isso!) */}
           {calculateMinutes() > 0 && (
             <div className="mt-4 p-3 bg-primary/5 rounded-lg border border-primary/20">
               <p className="text-sm text-muted-foreground">

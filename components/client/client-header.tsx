@@ -27,21 +27,36 @@ export function ClientHeader({ client }: { client: ClientType }) {
   const initial = client.name.charAt(0).toUpperCase();
 
   const handleSave = async () => {
+    // 🔥 VALIDAÇÕES RÍGIDAS AQUI
+    if (!editName.trim()) {
+      toast.error("O nome do cliente é obrigatório.");
+      return;
+    }
+
+    const cleanCpf = editCpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11) {
+      toast.error("O CPF deve conter exatamente 11 dígitos.");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/clients/${client.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: editName, cpf: editCpf }),
+        body: JSON.stringify({ name: editName.trim(), cpf: editCpf }),
       });
 
       if (res.ok) {
         toast.success("Perfil atualizado!");
         setIsEditing(false);
         mutate(`/api/clients/${client.id}`);
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Erro ao salvar.");
       }
     } catch {
-      toast.error("Erro ao salvar.");
+      toast.error("Erro de conexão ao salvar.");
     } finally {
       setSaving(false);
     }
@@ -49,7 +64,6 @@ export function ClientHeader({ client }: { client: ClientType }) {
 
   return (
     <div className="flex items-center gap-3 md:gap-4 border-b border-border/50 pb-4 md:pb-6">
-      {/* Botão Voltar */}
       <Button
         asChild
         variant="outline"
@@ -62,7 +76,6 @@ export function ClientHeader({ client }: { client: ClientType }) {
       </Button>
 
       <div className="flex items-center gap-3 w-full min-w-0">
-        {/* Avatar (Escondido em telas muito pequenas se estiver editando para dar espaço) */}
         <div className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xl shadow-sm border border-primary/20">
           {initial}
         </div>
@@ -74,21 +87,20 @@ export function ClientHeader({ client }: { client: ClientType }) {
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
                 className="h-9 font-bold text-lg px-2 bg-muted/50 border-primary/20 focus-visible:ring-primary/30"
-                placeholder="Nome"
+                placeholder="Nome obrigatório"
                 autoFocus
               />
               <Input
                 value={editCpf}
                 onChange={(e) => setEditCpf(formatCpf(e.target.value))}
                 className="h-7 font-mono text-[10px] px-2 bg-muted/50 border-primary/20 w-32"
-                placeholder="CPF"
+                placeholder="CPF obrigatório"
               />
             </div>
           ) : (
             <div className="flex flex-col">
-              {/* NOME + LÁPIS LADO A LADO */}
               <div
-                className="flex items-center gap-2 group cursor-pointer"
+                className="flex items-center gap-2 group cursor-pointer w-fit pr-4"
                 onClick={() => setIsEditing(true)}
               >
                 <h1 className="text-xl md:text-2xl font-bold tracking-tight text-foreground leading-tight truncate">
@@ -103,7 +115,6 @@ export function ClientHeader({ client }: { client: ClientType }) {
           )}
         </div>
 
-        {/* Botões de Ação na Direita */}
         {isEditing && (
           <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-2">
             <Button

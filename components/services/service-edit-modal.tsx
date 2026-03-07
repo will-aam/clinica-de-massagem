@@ -31,6 +31,12 @@ interface ServiceEditModalProps {
   onSuccess: () => void;
 }
 
+type Duration = {
+  id: string;
+  label: string;
+  minutes: number;
+};
+
 export function ServiceEditModal({
   open,
   onOpenChange,
@@ -39,6 +45,7 @@ export function ServiceEditModal({
   onSuccess,
 }: ServiceEditModalProps) {
   const [loading, setLoading] = useState(false);
+  const [durations, setDurations] = useState<Duration[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -46,6 +53,16 @@ export function ServiceEditModal({
     duration: "",
     category_id: "",
   });
+
+  // Busca as durações cadastradas toda vez que o modal for aberto
+  useEffect(() => {
+    if (open) {
+      fetch("/api/service-durations")
+        .then((res) => res.json())
+        .then((data) => setDurations(data))
+        .catch((err) => console.error("Erro ao buscar durações:", err));
+    }
+  }, [open]);
 
   // Carrega os dados do serviço no formulário quando o modal abre
   useEffect(() => {
@@ -116,7 +133,7 @@ export function ServiceEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-125">
+      <DialogContent className="sm:max-w-106.25">
         <DialogHeader>
           <DialogTitle>Editar Serviço</DialogTitle>
         </DialogHeader>
@@ -165,18 +182,37 @@ export function ServiceEditModal({
                 onChange={(e) =>
                   setFormData({ ...formData, price: e.target.value })
                 }
+                // 🔥 Classes adicionadas para remover as setas nativas do input de número
+                className="[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
               />
             </div>
+
+            {/* 🔥 Novo Select de Duração puxando da API */}
             <div className="grid gap-2">
-              <Label htmlFor="duration">Duração (minutos)</Label>
-              <Input
-                id="duration"
-                type="number"
+              <Label htmlFor="duration">Duração</Label>
+              <Select
                 value={formData.duration}
-                onChange={(e) =>
-                  setFormData({ ...formData, duration: e.target.value })
+                onValueChange={(val) =>
+                  setFormData({ ...formData, duration: val })
                 }
-              />
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tempo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {durations.length === 0 ? (
+                    <SelectItem value="none" disabled>
+                      Nenhuma duração cadastrada
+                    </SelectItem>
+                  ) : (
+                    durations.map((d) => (
+                      <SelectItem key={d.id} value={d.minutes.toString()}>
+                        {d.label}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

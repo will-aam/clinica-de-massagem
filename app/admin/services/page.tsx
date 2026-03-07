@@ -12,17 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { DurationManager } from "@/components/service-durations/duration-manager";
 import { cn } from "@/lib/utils"; // <-- IMPORTAÇÃO ADICIONADA AQUI
-import {
-  Plus,
-  Cog,
-  Package,
-  FolderOpen,
-  Tags,
-  Clock,
-  Loader2,
-  Layers,
-  Edit2,
-} from "lucide-react";
+import { Plus, Cog, Package, Tags, Clock, Loader2, Layers } from "lucide-react";
 
 // Importação dos Modais
 import { ServiceEditModal } from "@/components/services/service-edit-modal";
@@ -240,7 +230,6 @@ function ServicesTabs() {
                     <span className="text-sm font-bold">
                       {formatCurrency(Number(pkg.price))}
                     </span>
-                    <Edit2 className="h-3 w-3 opacity-20 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
               ))}
@@ -288,7 +277,6 @@ function ServicesTabs() {
                       </p>
                     </div>
                   </div>
-                  <Edit2 className="h-4 w-4 opacity-20" />
                 </div>
               ))}
             </div>
