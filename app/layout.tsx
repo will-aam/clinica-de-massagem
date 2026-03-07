@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { SessionProvider } from "@/components/session-provider";
+import { InstallPrompt } from "@/components/install-prompt"; // 🔥 LINHA NOVA: Importando o nosso banner
 import "./globals.css";
 
 const inter = Inter({
@@ -16,6 +17,7 @@ const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
 });
+
 export const metadata: Metadata = {
   title: "Totten - Sistema de Gestão e Check-in",
   description:
@@ -47,6 +49,7 @@ export const metadata: Metadata = {
     telephone: false,
   },
 };
+
 export const viewport: Viewport = {
   themeColor: "#18181b",
   width: "device-width",
@@ -65,20 +68,19 @@ export default function RootLayout({
         className={`${inter.variable} ${playfair.variable} font-sans antialiased`}
       >
         <SessionProvider>
-          {" "}
-          {/* 🔥 LINHA NOVA 2 */}
           <ThemeProvider
             attribute="class"
             defaultTheme="light"
             enableSystem={false}
             disableTransitionOnChange
           >
+            <InstallPrompt />{" "}
+            {/* 🔥 LINHA NOVA: O banner de instalação entra aqui! */}
             {children}
             <Toaster position="top-right" richColors />
             <Analytics />
           </ThemeProvider>
-        </SessionProvider>{" "}
-        {/* 🔥 FECHA AQUI */}
+        </SessionProvider>
       </body>
     </html>
   );
