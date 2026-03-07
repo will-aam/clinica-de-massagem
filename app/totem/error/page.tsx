@@ -4,7 +4,7 @@
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Suspense } from "react";
-import { AlertTriangle, ArrowLeft, Phone } from "lucide-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const errorMessages: Record<string, { title: string; description: string }> = {
@@ -29,14 +29,13 @@ const errorMessages: Record<string, { title: string; description: string }> = {
       "Você já fez check-in hoje neste pacote. Aproveite seu atendimento!",
   },
   ORG_NOT_FOUND: {
-    title: "Clínica não identificada",
-    description:
-      "Não foi possível identificar a clínica. Peça ajuda na recepção.",
+    title: "Login não identificado",
+    description: "Não conseguimos identificar a empresa.",
   },
   UNKNOWN: {
     title: "Erro inesperado",
     description:
-      "Ocorreu um problema ao processar seu check-in. Tente novamente ou fale com a recepção.",
+      "Ocorreu um problema ao processar seu check-in. Fale com a recepção.",
   },
 };
 
@@ -46,7 +45,7 @@ function ErrorContent() {
   const slug = searchParams.get("slug") || "";
   const error = errorMessages[errorType] || errorMessages.UNKNOWN;
 
-  const checkInLink = slug ? `/totem/check-in?slug=${slug}` : "/totem/check-in";
+  // Agora definimos apenas o link para voltar ao início
   const idleLink = slug ? `/totem/idle?slug=${slug}` : "/totem/idle";
 
   return (
@@ -66,21 +65,9 @@ function ErrorContent() {
 
       <div className="flex w-full flex-col gap-3">
         <Button asChild size="lg" className="h-16 text-lg">
-          <Link href={checkInLink}>
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Tentar Novamente
-          </Link>
-        </Button>
-
-        <Button
-          asChild
-          variant="outline"
-          size="lg"
-          className="h-16 text-lg text-foreground"
-        >
           <Link href={idleLink}>
-            <Phone className="mr-2 h-5 w-5" />
-            Falar com a Recepção
+            <ArrowLeft className="mr-2 h-5 w-5" />
+            Voltar ao Início
           </Link>
         </Button>
       </div>

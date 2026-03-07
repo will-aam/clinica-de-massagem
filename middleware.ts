@@ -14,7 +14,7 @@ export async function middleware(request: NextRequest) {
     "/totem/error",
     "/admin/login",
     "/admin/register",
-    "/admin/forgot-password",
+    "/forgot-password",
     "/check-email",
     "/verify-email",
     "/api/auth",

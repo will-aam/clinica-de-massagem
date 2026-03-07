@@ -5,17 +5,10 @@ import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Heart, ArrowLeft } from "lucide-react";
+import { Bird, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { toast } from "sonner";
 
 // 🔥 FORÇA RENDERIZAÇÃO APENAS NO CLIENTE
@@ -75,12 +68,12 @@ function LoginForm() {
   };
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center bg-background p-4">
+    <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-12 sm:px-6">
       <Link
         href="/totem/idle"
-        className="absolute top-6 left-6 md:top-8 md:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group"
+        className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-sm border border-border group-hover:bg-[#D9C6BF]/20 transition-colors">
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-transparent sm:bg-muted/50 hover:bg-muted transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </div>
         <span className="hidden sm:inline font-medium">
@@ -88,78 +81,82 @@ function LoginForm() {
         </span>
       </Link>
 
-      <Card className="w-full max-w-md border-border shadow-lg">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary shadow-sm">
-            <Heart className="h-8 w-8 text-primary-foreground" />
+      <div className="w-full max-w-sm mt-8 sm:mt-0">
+        <div className="text-center mb-10">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Bird className="h-8 w-8" />
           </div>
-          <CardTitle className="font-serif text-3xl text-card-foreground">
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground mb-3">
             Totten
-          </CardTitle>
-          <CardDescription>Acesse o painel administrativo</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="email" className="text-card-foreground">
-                E-mail
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@empresa.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={loading}
-                className="bg-muted text-foreground focus-visible:ring-primary"
-              />
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password" className="text-card-foreground">
-                  Senha
-                </Label>
-                <Link
-                  href="/admin/forgot-password"
-                  className="text-xs text-primary hover:underline"
-                >
-                  Esqueceu a senha?
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Sua senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                disabled={loading}
-                className="bg-muted text-foreground focus-visible:ring-primary"
-              />
-            </div>
+          </h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Acesse o painel administrativo
+          </p>
+        </div>
 
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="email" className="text-base sm:text-sm">
+              E-mail
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="admin@empresa.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={loading}
+              className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password" className="text-base sm:text-sm">
+                Senha
+              </Label>
+              <Link
+                href="/admin/forgot-password"
+                className="text-sm sm:text-xs text-primary hover:underline font-medium"
+              >
+                Esqueceu a senha?
+              </Link>
+            </div>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Sua senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={loading}
+              className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+            />
+          </div>
+
+          <div className="pt-2">
             <Button
               type="submit"
               size="lg"
-              className="mt-2 text-base shadow-sm hover:scale-[1.02] transition-transform"
+              className="w-full h-14 sm:h-12 text-lg sm:text-base rounded-xl transition-all hover:scale-[1.02] shadow-md"
               disabled={loading}
             >
               {loading ? "Entrando..." : "Entrar"}
             </Button>
+          </div>
 
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              Ainda não tem uma conta?{" "}
-              <Link
-                href="/register"
-                className="font-medium text-primary hover:underline"
-              >
-                Crie uma conta
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          <div className="text-center text-base sm:text-sm text-muted-foreground">
+            Ainda não tem uma conta?{" "}
+            <Link
+              href="/register"
+              className="font-semibold text-primary hover:underline"
+            >
+              Crie uma conta
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

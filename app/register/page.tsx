@@ -1,19 +1,12 @@
 "use client";
 
-import { useState, useActionState, useEffect } from "react";
+import { useState, useActionState } from "react";
 import { registerAdmin, ActionState } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { Heart, ArrowLeft, Repeat, Check, X } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Bird, ArrowLeft, Repeat, Check, X } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 
 const initialState: ActionState = { error: "" };
@@ -32,7 +25,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordMatchError, setPasswordMatchError] = useState("");
 
-  // Funções de Máscara (Idênticas às de Configurações)
+  // Funções de Máscara
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let v = e.target.value.replace(/\D/g, "");
 
@@ -117,247 +110,241 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center bg-background md:p-4">
-      {/* Botão de Voltar - Oculto no mobile extremo para focar no form, mas visível via header ou scroll se quiser. */}
+    <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-12 sm:px-6">
       <Link
-        href="/totem/idle"
-        className="absolute top-4 left-4 md:top-8 md:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
+        href="/admin/login"
+        className="absolute top-4 left-4 sm:top-8 sm:left-8 flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors group z-10"
       >
-        <div className="flex h-8 w-8 md:h-10 md:w-10 items-center justify-center rounded-full bg-card shadow-sm border border-border group-hover:bg-[#D9C6BF]/20 transition-colors">
-          <ArrowLeft className="h-4 w-4 md:h-5 md:w-5" />
+        <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-transparent sm:bg-muted/50 hover:bg-muted transition-colors">
+          <ArrowLeft className="h-5 w-5" />
         </div>
-        <span className="hidden sm:inline font-medium">Voltar</span>
+        <span className="hidden sm:inline font-medium">Voltar ao Login</span>
       </Link>
 
-      {/* Card que ocupa 100% no mobile e vira box no Desktop */}
-      <Card className="w-full max-w-2xl border-0 md:border md:border-border shadow-none md:shadow-lg bg-background md:bg-card min-h-svh md:min-h-fit md:my-8 rounded-none md:rounded-xl">
-        <CardHeader className="text-center pt-12 md:pt-6 pb-2">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-sm">
-            <Heart className="h-7 w-7 text-primary-foreground" />
+      <div className="w-full max-w-xl mt-8 sm:mt-0">
+        <div className="text-center mb-10">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Bird className="h-8 w-8" />
           </div>
-          <CardTitle className="font-serif text-2xl md:text-3xl text-card-foreground">
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground mb-3">
             Totten
-          </CardTitle>
-          <CardDescription>Crie a conta da sua empresa</CardDescription>
-        </CardHeader>
+          </h1>
+          <p className="text-base sm:text-lg text-muted-foreground">
+            Crie a conta da sua empresa
+          </p>
+        </div>
 
-        <CardContent className="px-4 md:px-8 pb-8">
-          <form
-            action={formAction}
-            onSubmit={preSubmitCheck}
-            className="flex flex-col gap-6"
-          >
-            {/* Bloco 1: Dados da Empresa e Responsável */}
-            <div className="grid gap-4 border border-border rounded-lg p-4 bg-card shadow-sm">
-              <h3 className="font-medium text-sm text-primary uppercase tracking-wider mb-2">
-                Dados da Empresa
-              </h3>
+        <form
+          action={formAction}
+          onSubmit={preSubmitCheck}
+          className="flex flex-col gap-10"
+        >
+          {/* Bloco 1: Dados da Empresa e Responsável */}
+          <div className="flex flex-col gap-6">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
+              Dados da Empresa
+            </h3>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="companyName" className="text-card-foreground">
-                    Nome de Exibição / Fantasia
-                  </Label>
-                  <Input
-                    id="companyName"
-                    name="companyName"
-                    placeholder="Ex: Totten Tecnologia"
-                    required
-                    className="bg-muted text-foreground focus-visible:ring-primary"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="displayName" className="text-card-foreground">
-                    Seu Nome Completo (Responsável)
-                  </Label>
-                  <Input
-                    id="displayName"
-                    name="displayName"
-                    placeholder="Ex: João Silva"
-                    required
-                    className="bg-muted text-foreground focus-visible:ring-primary"
-                  />
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="document">{docType}</Label>
-                    <button
-                      type="button"
-                      onClick={toggleDocType}
-                      className="text-[10px] text-primary flex items-center gap-1 hover:underline font-medium uppercase tracking-wider"
-                    >
-                      <Repeat className="h-3 w-3" />
-                      Mudar para {docType === "CNPJ" ? "CPF" : "CNPJ"}
-                    </button>
-                  </div>
-                  <Input
-                    id="document"
-                    name="document"
-                    value={document}
-                    onChange={handleDocumentChange}
-                    required
-                    placeholder={
-                      docType === "CNPJ"
-                        ? "00.000.000/0001-00"
-                        : "000.000.000-00"
-                    }
-                    className="bg-muted text-foreground focus-visible:ring-primary"
-                  />
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="contactPhone"
-                    className="text-card-foreground"
-                  >
-                    Telefone de Contato
-                  </Label>
-                  <Input
-                    id="contactPhone"
-                    name="contactPhone"
-                    value={phone}
-                    onChange={handlePhoneChange}
-                    required
-                    placeholder="(00) 00000-0000"
-                    className="bg-muted text-foreground focus-visible:ring-primary"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Bloco 2: Acesso e Segurança */}
-            <div className="grid gap-4 border border-border rounded-lg p-4 bg-card shadow-sm">
-              <h3 className="font-medium text-sm text-primary uppercase tracking-wider mb-2">
-                Acesso e Segurança
-              </h3>
-
+            <div className="grid sm:grid-cols-2 gap-5">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email" className="text-card-foreground">
-                  E-mail de Acesso
+                <Label htmlFor="companyName" className="text-base sm:text-sm">
+                  Nome de Exibição / Fantasia
                 </Label>
                 <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="admin@empresa.com"
+                  id="companyName"
+                  name="companyName"
+                  placeholder="Ex: Totten Tecnologia"
                   required
-                  className="bg-muted text-foreground focus-visible:ring-primary"
+                  className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
                 />
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="password" className="text-card-foreground">
-                    Senha
-                  </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                    minLength={8}
-                    className="bg-muted text-foreground focus-visible:ring-primary"
-                  />
-                  {/* Barra de Força da Senha */}
-                  {password && (
-                    <div className="space-y-1 mt-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Força da senha:
-                        </span>
-                        <span
-                          className={`font-medium ${strength >= 75 ? "text-green-500" : strength >= 50 ? "text-yellow-500" : "text-red-500"}`}
-                        >
-                          {strengthText}
-                        </span>
-                      </div>
-                      <Progress
-                        value={strength}
-                        indicatorColor={strengthColor}
-                        className="h-1"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Label
-                    htmlFor="confirmPassword"
-                    className="text-card-foreground"
-                  >
-                    Confirmar Senha
-                  </Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => {
-                      setConfirmPassword(e.target.value);
-                      setPasswordMatchError("");
-                    }}
-                    placeholder="••••••••"
-                    required
-                    className={`bg-muted text-foreground focus-visible:ring-primary ${
-                      confirmPassword && password !== confirmPassword
-                        ? "border-destructive focus-visible:ring-destructive"
-                        : ""
-                    }`}
-                  />
-                  {confirmPassword && (
-                    <p
-                      className={`text-xs flex items-center gap-1 mt-1 ${password === confirmPassword ? "text-green-500" : "text-destructive"}`}
-                    >
-                      {password === confirmPassword ? (
-                        <Check className="h-3 w-3" />
-                      ) : (
-                        <X className="h-3 w-3" />
-                      )}
-                      {password === confirmPassword
-                        ? "As senhas coincidem"
-                        : "As senhas não coincidem"}
-                    </p>
-                  )}
-                </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="displayName" className="text-base sm:text-sm">
+                  Seu Nome Completo
+                </Label>
+                <Input
+                  id="displayName"
+                  name="displayName"
+                  placeholder="Ex: João Silva"
+                  required
+                  className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+                />
               </div>
             </div>
 
-            {/* Erros Gerais (Action ou Cliente) */}
-            {(state.error || passwordMatchError) && (
-              <p className="text-sm font-medium text-destructive bg-destructive/10 p-3 rounded-md text-center">
-                {passwordMatchError || state.error}
-              </p>
-            )}
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="document" className="text-base sm:text-sm">
+                    {docType}
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={toggleDocType}
+                    className="text-xs text-primary flex items-center gap-1 hover:underline font-medium"
+                  >
+                    <Repeat className="h-3 w-3" />
+                    Mudar para {docType === "CNPJ" ? "CPF" : "CNPJ"}
+                  </button>
+                </div>
+                <Input
+                  id="document"
+                  name="document"
+                  value={document}
+                  onChange={handleDocumentChange}
+                  required
+                  placeholder={
+                    docType === "CNPJ" ? "00.000.000/0001-00" : "000.000.000-00"
+                  }
+                  className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+                />
+              </div>
 
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="contactPhone" className="text-base sm:text-sm">
+                  Telefone de Contato
+                </Label>
+                <Input
+                  id="contactPhone"
+                  name="contactPhone"
+                  value={phone}
+                  onChange={handlePhoneChange}
+                  required
+                  placeholder="(00) 00000-0000"
+                  className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bloco 2: Acesso e Segurança */}
+          <div className="flex flex-col gap-6">
+            <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-widest border-b border-border pb-2">
+              Acesso e Segurança
+            </h3>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="email" className="text-base sm:text-sm">
+                E-mail de Acesso
+              </Label>
+              <Input
+                id="email"
+                name="email"
+                type="email"
+                placeholder="admin@empresa.com"
+                required
+                className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="password" className="text-base sm:text-sm">
+                  Senha
+                </Label>
+                <Input
+                  id="password"
+                  name="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                  className="h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm"
+                />
+                {password && (
+                  <div className="space-y-1.5 mt-1">
+                    <div className="flex justify-between text-xs">
+                      <span className="text-muted-foreground">Força:</span>
+                      <span
+                        className={`font-medium ${strength >= 75 ? "text-green-500" : strength >= 50 ? "text-yellow-500" : "text-red-500"}`}
+                      >
+                        {strengthText}
+                      </span>
+                    </div>
+                    <Progress
+                      value={strength}
+                      indicatorColor={strengthColor}
+                      className="h-1"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label
+                  htmlFor="confirmPassword"
+                  className="text-base sm:text-sm"
+                >
+                  Confirmar Senha
+                </Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    setConfirmPassword(e.target.value);
+                    setPasswordMatchError("");
+                  }}
+                  placeholder="••••••••"
+                  required
+                  className={`h-12 sm:h-11 bg-muted/50 border-transparent hover:border-border focus-visible:bg-transparent text-base sm:text-sm ${
+                    confirmPassword && password !== confirmPassword
+                      ? "border-destructive focus-visible:border-destructive bg-destructive/5"
+                      : ""
+                  }`}
+                />
+                {confirmPassword && (
+                  <p
+                    className={`text-xs flex items-center gap-1 mt-1 ${password === confirmPassword ? "text-green-500" : "text-destructive"}`}
+                  >
+                    {password === confirmPassword ? (
+                      <Check className="h-3 w-3" />
+                    ) : (
+                      <X className="h-3 w-3" />
+                    )}
+                    {password === confirmPassword
+                      ? "Senhas coincidem"
+                      : "Senhas não coincidem"}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Erros Gerais */}
+          {(state.error || passwordMatchError) && (
+            <div className="p-4 rounded-xl bg-destructive/10 text-destructive text-sm font-medium text-center border border-destructive/20">
+              {passwordMatchError || state.error}
+            </div>
+          )}
+
+          <div className="pt-2">
             <Button
               type="submit"
               size="lg"
-              className="mt-2 text-base shadow-sm hover:scale-[1.02] transition-transform w-full"
+              className="w-full h-14 sm:h-12 text-lg sm:text-base rounded-xl transition-all hover:scale-[1.02] shadow-md"
               disabled={
                 isPending || password !== confirmPassword || strength < 50
               }
             >
               {isPending ? "Criando empresa..." : "Finalizar Cadastro"}
             </Button>
+          </div>
 
-            <div className="mt-2 text-center text-sm text-muted-foreground pb-4 md:pb-0">
-              Já possui uma conta?{" "}
-              <Link
-                href="/admin/login"
-                className="font-medium text-primary hover:underline"
-              >
-                Faça login aqui
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+          <div className="text-center text-base sm:text-sm text-muted-foreground">
+            Já possui uma conta?{" "}
+            <Link
+              href="/admin/login"
+              className="font-semibold text-primary hover:underline"
+            >
+              Faça login aqui
+            </Link>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
