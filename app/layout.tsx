@@ -17,9 +17,26 @@ const playfair = Playfair_Display({
   variable: "--font-playfair",
 });
 export const metadata: Metadata = {
-  title: "Totten - Sistema de Gestão",
+  title: "Totten - Sistema de Gestão e Check-in",
   description:
-    "Sistema de gestão de check-ins e pacotes de sessões para empresas.",
+    "Sistema completo de gestão de check-ins, pacotes de sessões e controle de atendimento para empresas.",
+  keywords: [
+    "sistema de gestão",
+    "totem de atendimento",
+    "check-in",
+    "pacotes de sessões",
+    "gestão de clientes",
+    "automação de atendimento",
+  ],
+  openGraph: {
+    title: "Totten - Sistema de Gestão e Check-in",
+    description:
+      "Sistema completo de gestão de check-ins e pacotes de sessões.",
+    url: "https://totten.com.br",
+    siteName: "Totten",
+    locale: "pt_BR",
+    type: "website",
+  },
   manifest: "/site.webmanifest",
   appleWebApp: {
     capable: true,
@@ -30,7 +47,6 @@ export const metadata: Metadata = {
     telephone: false,
   },
 };
-
 export const viewport: Viewport = {
   themeColor: "#18181b",
   width: "device-width",
