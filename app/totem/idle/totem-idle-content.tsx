@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Heart, Lock, LayoutDashboard, Loader2 } from "lucide-react";
+import { Bird, Lock, LayoutDashboard } from "lucide-react";
 
 export default function TotemIdleContent() {
   const { data: session, status } = useSession();
@@ -58,22 +58,19 @@ export default function TotemIdleContent() {
       <div className="flex flex-col items-center gap-8 w-full max-w-sm animate-in fade-in zoom-in duration-700">
         <div className="flex flex-col items-center gap-4">
           <div className="flex h-20 w-20 md:h-24 md:w-24 items-center justify-center rounded-full bg-primary">
-            <Heart className="h-10 w-10 md:h-12 md:w-12 text-primary-foreground" />
+            <Bird className="h-10 w-10 md:h-12 md:w-12 text-primary-foreground" />
           </div>
-          <div className="space-y-1 text-center">
+
+          {/* 🔥 Alteração principal: Container com altura fixa mínima para evitar pulos na tela */}
+          <div className="space-y-1 text-center min-h-15 flex items-center justify-center w-full">
             {loading || status === "loading" ? (
-              <div className="flex items-center justify-center gap-2 py-3">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
+              /* 🔥 Skeleton Minimalista em vez do Loader2 */
+              <div className="h-12 w-48 md:h-15 md:w-64 rounded-xl bg-muted animate-pulse mx-auto" />
             ) : (
-              <>
-                <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl">
-                  {clinicName}
-                </h1>
-                <p className="text-base md:text-lg text-muted-foreground leading-relaxed">
-                  Sua jornada de bem-estar começa aqui.
-                </p>
-              </>
+              /* 🔥 Adicionado um 'fade-in' suave para quando o nome aparecer */
+              <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl animate-in fade-in duration-700">
+                {clinicName}
+              </h1>
             )}
           </div>
         </div>
