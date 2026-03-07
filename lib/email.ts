@@ -32,6 +32,7 @@ export async function sendVerificationEmail(email: string, token: string) {
         </div>
       `,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Erro ao enviar e-mail:", error);
@@ -73,18 +74,10 @@ export async function sendPasswordResetEmail(
         </div>
       `,
     });
+
     return { success: true };
   } catch (error) {
     console.error("Erro ao enviar e-mail:", error);
     return { success: false, error };
   }
-}
-
-export function generateRandomPassword() {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  let password = "";
-  for (let i = 0; i < 10; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return password;
 }
