@@ -95,16 +95,13 @@ export default function AgendaPage() {
         setAppointments([]);
         return;
       }
-      // app/admin/agenda/page.tsx (dentro de loadAppointments)
 
       const data = await res.json();
 
       // Mapeia para garantir que o date_time seja um objeto Date real para o DnD
       const mapped = (data.appointments ?? []).map((appt: any) => ({
         ...appt,
-        // O Prisma costuma retornar date_time. Se o seu banco usa dateTime, ajuste aqui:
         date_time: appt.date_time ? new Date(appt.date_time) : new Date(),
-        // Garante que o campo time exista para o cálculo de pixels
         time: appt.time || format(new Date(appt.date_time), "HH:mm"),
       }));
 
@@ -125,77 +122,82 @@ export default function AgendaPage() {
       <AdminHeader title="Agenda Diária" />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-5xl mx-auto w-full pb-24 md:pb-6">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6 border-b border-border/50 pb-6">
-          <Popover>
-            <PopoverTrigger asChild>
-              <div className="flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-muted/50 p-2 -ml-2 rounded-2xl transition-colors group w-fit">
-                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                  <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5 border-b border-border/50 pb-5">
+          {/* Cabeçalho da Data */}
+          <div className="flex w-full xl:w-auto justify-between items-center">
+            <Popover>
+              <PopoverTrigger asChild>
+                <div className="flex items-center gap-3 sm:gap-4 cursor-pointer hover:bg-muted/50 p-2 -ml-2 rounded-2xl transition-colors group w-fit">
+                  <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
+                    <CalendarIcon className="h-6 w-6 sm:h-7 sm:w-7" />
+                  </div>
+                  <div className="text-left">
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground leading-tight flex items-center gap-2">
+                      <span className="hidden sm:inline-block">
+                        {formattedDateDesktop}
+                      </span>
+                      <span className="sm:hidden">{formattedDateMobile}</span>
+                      <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
+                    </h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      {loadingAppointments
+                        ? "Carregando..."
+                        : `${appointments.length} agendamentos`}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-foreground leading-tight flex items-center gap-2">
-                    <span className="hidden sm:inline-block">
-                      {formattedDateDesktop}
-                    </span>
-                    <span className="sm:hidden">{formattedDateMobile}</span>
-                    <ChevronDown className="h-4 w-4 text-muted-foreground opacity-50 group-hover:opacity-100 transition-opacity" />
-                  </h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    {loadingAppointments
-                      ? "Carregando..."
-                      : `Você tem ${appointments.length} agendamentos.`}
-                  </p>
-                </div>
-              </div>
-            </PopoverTrigger>
-            <PopoverContent
-              className="w-auto p-0 rounded-2xl shadow-xl"
-              align="start"
-            >
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date);
-                    setWeekStart(startOfWeek(date, { weekStartsOn: 0 }));
-                  }
-                }}
-                initialFocus
-                locale={ptBR}
-              />
-            </PopoverContent>
-          </Popover>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0 rounded-2xl shadow-xl"
+                align="start"
+              >
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date);
+                      setWeekStart(startOfWeek(date, { weekStartsOn: 0 }));
+                    }
+                  }}
+                  initialFocus
+                  locale={ptBR}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto">
-            <div className="flex items-center w-full sm:w-auto justify-between sm:justify-center bg-muted/20 sm:bg-transparent rounded-2xl p-1 sm:p-0 border sm:border-0 border-border/50">
+          {/* Controles de Semana e Botões */}
+          <div className="flex flex-col md:flex-row items-center gap-4 w-full xl:w-auto">
+            {/* Seletor de Dias da Semana */}
+            <div className="flex items-center w-full md:w-auto justify-between bg-muted/20 md:bg-transparent rounded-2xl p-1 md:p-0 border md:border-0 border-border/50">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={prevWeek}
-                className="shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full"
+                className="shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-background md:hover:bg-muted"
               >
-                <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+                <ChevronLeft className="h-5 w-5" />
               </Button>
 
-              <div className="flex gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden px-1">
+              <div className="flex gap-2 overflow-x-auto [&::-webkit-scrollbar]:hidden px-1 sm:px-2 py-1 snap-x scroll-smooth">
                 {weekDays.map((day) => (
                   <button
                     key={day.toISOString()}
                     onClick={() => setSelectedDate(day)}
                     className={cn(
-                      "flex flex-col items-center justify-center h-12 w-10 sm:h-14 sm:w-12 rounded-xl border transition-all shrink-0",
+                      "flex flex-col items-center justify-center h-14 w-12 sm:h-16 sm:w-14 rounded-xl border transition-all shrink-0 snap-center",
                       isSameDay(day, selectedDate)
-                        ? "bg-primary text-primary-foreground shadow-md scale-105"
+                        ? "bg-primary text-primary-foreground shadow-md scale-105 border-primary"
                         : isSameDay(day, new Date())
-                          ? "bg-primary/10 text-primary border-primary/20"
-                          : "bg-card text-muted-foreground hover:bg-muted/50",
+                          ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                          : "bg-card text-muted-foreground hover:bg-muted hover:border-border/80 border-transparent",
                     )}
                   >
-                    <span className="text-[9px] font-bold uppercase">
+                    <span className="text-[10px] sm:text-xs font-bold uppercase mb-0.5">
                       {format(day, "EEE", { locale: ptBR }).substring(0, 3)}
                     </span>
-                    <span className="text-base font-bold">
+                    <span className="text-base sm:text-lg font-bold leading-none">
                       {format(day, "dd")}
                     </span>
                   </button>
@@ -206,27 +208,30 @@ export default function AgendaPage() {
                 variant="ghost"
                 size="icon"
                 onClick={nextWeek}
-                className="shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full"
+                className="shrink-0 h-10 w-10 sm:h-12 sm:w-12 rounded-full hover:bg-background md:hover:bg-muted"
               >
-                <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" />
+                <ChevronRight className="h-5 w-5" />
               </Button>
             </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setIsSettingsOpen(true)}
-              className="rounded-xl h-12 sm:h-10 w-12 sm:w-10"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
+            {/* Ações: Configurações + Novo */}
+            <div className="flex w-full md:w-auto gap-3">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsSettingsOpen(true)}
+                className="rounded-xl h-14 w-14 md:h-12 md:w-12 shrink-0 bg-card shadow-sm hover:bg-muted"
+              >
+                <Settings2 className="h-5 w-5 md:h-4 md:w-4" />
+              </Button>
 
-            <Button
-              onClick={() => setIsNewModalOpen(true)}
-              className="rounded-xl w-full sm:w-auto h-12 sm:h-10 font-semibold"
-            >
-              <Plus className="h-4 w-4 mr-1" /> Novo
-            </Button>
+              <Button
+                onClick={() => setIsNewModalOpen(true)}
+                className="rounded-xl flex-1 md:flex-none h-14 md:h-12 font-bold text-base md:text-sm shadow-sm"
+              >
+                <Plus className="h-5 w-5 md:h-4 md:w-4 mr-2" /> Novo Agendamento
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -265,7 +270,6 @@ export default function AgendaPage() {
         }) => {
           setOpeningTime(newOpening);
           setClosingTime(newClosing);
-          // Lógica de salvamento...
         }}
         onClearToday={() => loadAppointments(selectedDate)}
       />
