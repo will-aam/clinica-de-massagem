@@ -100,7 +100,6 @@ export function AppointmentDetailsModal({
         dbStatus === "pendente" ? "a_confirmar" : dbStatus || "a_confirmar",
       );
 
-      // 🔥 Aqui estava o erro: garantindo que pegue o campo certo da API
       const currentPayment =
         appointment.paymentMethod?.toLowerCase() ||
         appointment.payment_method?.toLowerCase() ||
@@ -139,6 +138,17 @@ export function AppointmentDetailsModal({
     }
   };
 
+  const handleDelete = async () => {
+    try {
+      await deleteAppointment(appointment.id);
+      toast.success("Agendamento excluído!");
+      onRefresh?.();
+      onOpenChange(false);
+    } catch (error) {
+      toast.error("Erro ao excluir agendamento.");
+    }
+  };
+
   const calculateEndTime = (start: string, duration: number) => {
     const [h, m] = start.split(":").map(Number);
     const date = new Date();
@@ -148,7 +158,6 @@ export function AppointmentDetailsModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* 🔥 [&>button]:hidden remove o botão 'X' do topo direito */}
       <DialogContent
         className={cn(
           "w-[95vw] sm:max-w-125 p-4 sm:p-6 rounded-2xl flex flex-col max-h-[90dvh] [&>button]:hidden",
@@ -176,21 +185,39 @@ export function AppointmentDetailsModal({
             </span>
           </div>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={() => {
-              if (confirm("Excluir permanentemente?"))
-                deleteAppointment(appointment.id).then(() => {
-                  toast.success("Excluído!");
-                  onRefresh?.();
-                  onOpenChange(false);
-                });
-            }}
-          >
-            <Trash2 className="h-5 w-5" />
-          </Button>
+          {/* 🔥 AlertDialog (Shadcn) substituindo o confirm() nativo do topo */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="rounded-2xl">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir permanentemente?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Isso apagará este agendamento do banco de dados e não deixará
+                  histórico. Para manter o histórico, use o botão "Cancelar
+                  Sessão" abaixo.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl">
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-destructive hover:bg-destructive/90 text-white rounded-xl"
+                >
+                  Sim, excluir
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 overflow-y-auto py-2 pr-1">
@@ -283,7 +310,6 @@ export function AppointmentDetailsModal({
         </div>
 
         <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
-          {/* 🔥 SUMIR BOTÃO SE REALIZADO */}
           {status !== "realizado" && status !== "cancelado" && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -307,7 +333,7 @@ export function AppointmentDetailsModal({
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleSave("cancelado")}
-                    className="bg-destructive text-white rounded-xl"
+                    className="bg-destructive hover:bg-destructive/90 text-white rounded-xl"
                   >
                     Confirmar
                   </AlertDialogAction>
