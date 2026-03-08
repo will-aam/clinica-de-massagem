@@ -1,3 +1,4 @@
+// app/api/totem/history/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -50,11 +51,12 @@ export async function GET(request: Request) {
       take: 10,
     });
 
+    // 🔥 Adicionado o "?." para prevenir erro se o check-in for avulso (sem pacote)
     const formatted = checkIns.map((checkIn) => ({
       id: checkIn.id,
       dateTime: checkIn.date_time,
-      packageName: checkIn.package.name,
-      serviceName: checkIn.package.service.name,
+      packageName: checkIn.package?.name || "Check-in Avulso",
+      serviceName: checkIn.package?.service?.name || "Serviço Avulso",
     }));
 
     return NextResponse.json(formatted);
