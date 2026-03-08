@@ -1,4 +1,3 @@
-// app/actions/appointments.ts
 "use server";
 
 import { prisma } from "@/lib/prisma";
@@ -13,63 +12,75 @@ export type CreateAppointmentInput = {
   dateTime: Date | string;
   observations?: string;
   packageId?: string;
+  repeatCount?: number; // 🔥 NOVO: Quantidade de repetições (semanais)
 };
 
 export type CreateAppointmentResult =
   | { success: true; appointments: Appointment[] }
   | { success: false; error: string };
 
-// --- Ação de Criar (Mantida) ---
+// --- Ação de Criar (Agora com Recorrência Inteligente) ---
 export async function createAppointment(
   input: CreateAppointmentInput,
 ): Promise<CreateAppointmentResult> {
   try {
     const admin = await requireAuth();
-    const { clientId, serviceId, dateTime, observations, packageId } = input;
+    const {
+      clientId,
+      serviceId,
+      dateTime,
+      observations,
+      packageId,
+      repeatCount = 1,
+    } = input;
     const firstDateTime =
       typeof dateTime === "string" ? new Date(dateTime) : dateTime;
 
-    if (!packageId) {
-      const appointment = await prisma.appointment.create({
-        data: {
-          date_time: firstDateTime,
-          observations,
-          client_id: clientId,
-          service_id: serviceId,
-          organization_id: admin.organizationId,
-        },
+    // Garante que no mínimo 1 agendamento será criado
+    const totalSessionsToCreate = Math.max(1, repeatCount);
+    let startSessionNumber = 0;
+
+    // Se estiver atrelado a um pacote, fazemos as validações de saldo
+    if (packageId) {
+      const pkg = await prisma.package.findUnique({
+        where: { id: packageId },
       });
-      revalidatePath("/admin/agenda");
-      return { success: true, appointments: [appointment] };
+
+      if (!pkg || pkg.organization_id !== admin.organizationId) {
+        return { success: false, error: "Pacote não encontrado." };
+      }
+
+      const sessionsAvailable = pkg.total_sessions - pkg.used_sessions;
+      if (sessionsAvailable < totalSessionsToCreate) {
+        return {
+          success: false,
+          error: `Saldo insuficiente. O pacote tem apenas ${sessionsAvailable} sessões disponíveis.`,
+        };
+      }
+
+      // Marca de onde o contador vai começar (ex: se já usou 2, a próxima é a 3)
+      startSessionNumber = pkg.used_sessions;
     }
 
-    const pkg = await prisma.package.findUnique({
-      where: { id: packageId },
-    });
-
-    if (!pkg || pkg.organization_id !== admin.organizationId) {
-      return { success: false, error: "Pacote não encontrado." };
-    }
-
-    const sessionsToSchedule = pkg.total_sessions - pkg.used_sessions;
-    if (sessionsToSchedule <= 0) {
-      return { success: false, error: "Saldo de sessões insuficiente." };
-    }
-
+    // 🔥 O PULO DO GATO: Criamos todos os agendamentos de uma vez, somando 7 dias para cada repetição
     const appointments = await prisma.$transaction(async (tx) => {
       const created: Appointment[] = [];
-      for (let i = 0; i < sessionsToSchedule; i++) {
+
+      for (let i = 0; i < totalSessionsToCreate; i++) {
         const sessionDate = new Date(firstDateTime);
+        // Adiciona i semanas (i * 7 dias) à data original
         sessionDate.setDate(sessionDate.getDate() + i * 7);
+
         const appt = await tx.appointment.create({
           data: {
             date_time: sessionDate,
             observations,
             client_id: clientId,
             service_id: serviceId,
-            package_id: packageId,
+            package_id: packageId || null,
             organization_id: admin.organizationId,
-            session_number: pkg.used_sessions + i + 1,
+            // Se tiver pacote, numera a sessão. Se não, fica nulo.
+            session_number: packageId ? startSessionNumber + i + 1 : null,
           },
         });
         created.push(appt);
@@ -85,7 +96,7 @@ export async function createAppointment(
   }
 }
 
-// --- Ação de Atualizar (Versão Sanitizada contra erro de Decimal) ---
+// --- Ação de Atualizar (Mantida e intacta) ---
 export async function updateAppointment(
   id: string,
   data: {
@@ -149,13 +160,11 @@ export async function updateAppointment(
       },
     });
 
-    // 🔥 O PULO DO GATO: Serialização manual para o Next.js não dar erro
-    // Transformamos o objeto do Prisma em um objeto puro (Plain Object)
     const sanitizedAppointment = {
       ...updated,
       service: {
         ...updated.service,
-        price: Number(updated.service.price), // <-- Converte Decimal para Number aqui
+        price: Number(updated.service.price),
       },
     };
 
@@ -163,7 +172,7 @@ export async function updateAppointment(
 
     return {
       success: true,
-      appointment: sanitizedAppointment, // Agora o frontend vai aceitar!
+      appointment: sanitizedAppointment,
     };
   } catch (error) {
     console.error("Erro ao atualizar agendamento:", error);
@@ -171,7 +180,7 @@ export async function updateAppointment(
   }
 }
 
-// --- NOVO: Ação de Deletar (Lixeira) ---
+// --- Ação de Deletar (Lixeira) ---
 export async function deleteAppointment(id: string) {
   try {
     const admin = await requireAuth();
@@ -189,10 +198,8 @@ export async function deleteAppointment(id: string) {
     return { success: false, error: "Erro ao excluir agendamento." };
   }
 }
-/**
- * 🎯 Atualiza apenas a data/hora de um agendamento.
- * Recebe string ISO para garantir que o dado não se perca no transporte.
- */
+
+// --- Atualiza Data/Hora (Drag and Drop) ---
 export async function updateAppointmentDateTime(
   id: string,
   newDateIso: string,
@@ -206,7 +213,7 @@ export async function updateAppointmentDateTime(
         organization_id: admin.organizationId,
       },
       data: {
-        date_time: new Date(newDateIso), // Converte aqui no servidor
+        date_time: new Date(newDateIso),
       },
     });
 

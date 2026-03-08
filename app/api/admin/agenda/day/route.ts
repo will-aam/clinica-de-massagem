@@ -59,13 +59,14 @@ export async function GET(req: NextRequest) {
 
       const duration = Number(appt.service.duration ?? 60);
 
+      // Info de sessão base (o frontend agora faz um override visual mais bonito)
       let sessionInfo = "Avulsa";
       if (appt.package) {
         const current = appt.session_number ?? 1;
         sessionInfo = `Sessão ${current} de ${appt.package.total_sessions}`;
       }
 
-      // 🔥 AJUSTE AQUI: Pegando o preço real (Pacote ou Serviço)
+      // Pegando o preço real (Pacote ou Serviço)
       const rawPrice = appt.package?.price ?? appt.service.price ?? 0;
 
       let color = "bg-blue-100 border-blue-300 text-blue-900";
@@ -91,8 +92,18 @@ export async function GET(req: NextRequest) {
         checkInTime: appt.check_in?.date_time ?? null,
         observations: appt.observations ?? "",
         paymentMethod: appt.payment_method ?? "nenhum",
-        price: Number(rawPrice), // Converte Decimal para Number
-        packageId: appt.package_id,
+        price: Number(rawPrice),
+
+        // 🔥 INFORMAÇÕES NOVAS PARA O GRID DA AGENDA (Arraste e Info de Pacote)
+        date_time: appt.date_time.toISOString(),
+        package_id: appt.package_id,
+        session_number: appt.session_number,
+        package: appt.package
+          ? {
+              total_sessions: appt.package.total_sessions,
+              used_sessions: appt.package.used_sessions,
+            }
+          : null,
       };
     });
 

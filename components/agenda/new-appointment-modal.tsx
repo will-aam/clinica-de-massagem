@@ -12,7 +12,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -64,7 +63,7 @@ type ActivePackage = {
   name: string;
   total_sessions: number;
   used_sessions: number;
-  service_id: string; // 🔥 Adicionado para amarrar o serviço ao pacote
+  service_id: string;
 };
 
 function generateTimeSlots(openingTime: string, closingTime: string) {
@@ -92,10 +91,12 @@ export function NewAppointmentModal({
   openingTime = "08:00",
   closingTime = "19:00",
 }: NewAppointmentModalProps) {
-  const [isRecurring, setIsRecurring] = useState(false);
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState<string | undefined>(undefined);
-  const [sessions, setSessions] = useState(5);
+
+  // 🔥 ESTADOS DA RECORRÊNCIA
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [repeatCount, setRepeatCount] = useState(2); // Começa em 2 semanas
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -116,11 +117,12 @@ export function NewAppointmentModal({
 
   const TIME_SLOTS = generateTimeSlots(openingTime, closingTime);
 
-  const incrementSessions = () => setSessions((prev) => prev + 1);
-  const decrementSessions = () =>
-    setSessions((prev) => (prev > 2 ? prev - 1 : 2));
+  // Funções para manipular a quantidade de repetições
+  const incrementRepeat = () => setRepeatCount((prev) => prev + 1);
+  const decrementRepeat = () =>
+    setRepeatCount((prev) => (prev > 2 ? prev - 1 : 2));
 
-  // 1. CARREGA OPÇÕES (Com filtro de ativos para serviços)
+  // 1. CARREGA OPÇÕES
   useEffect(() => {
     async function loadOptions() {
       if (!open) return;
@@ -128,7 +130,7 @@ export function NewAppointmentModal({
       try {
         const [clientsRes, servicesRes] = await Promise.all([
           fetch("/api/admin/clients"),
-          fetch("/api/services?active=true"), // 🔥 Agora chama a API com o filtro de ativos
+          fetch("/api/services?active=true"),
         ]);
 
         if (clientsRes.ok) {
@@ -172,11 +174,30 @@ export function NewAppointmentModal({
   }, [selectedClientId]);
 
   // 3. REGRA DE NEGÓCIO: Se usar pacote, trava o serviço
+  // E sincroniza a recorrência com o saldo do pacote caso o usuário queira repetir
   useEffect(() => {
     if (usePackage && activePackage) {
       setSelectedServiceId(activePackage.service_id);
+
+      // Se a pessoa ativou a recorrência usando um pacote, o máximo de repetições é o saldo
+      const saldo = activePackage.total_sessions - activePackage.used_sessions;
+      if (isRecurring && repeatCount > saldo) {
+        setRepeatCount(saldo > 0 ? saldo : 1);
+      }
     }
-  }, [usePackage, activePackage]);
+  }, [usePackage, activePackage, isRecurring, repeatCount]);
+
+  // Limpa o formulário ao fechar o modal
+  useEffect(() => {
+    if (!open) {
+      setSelectedClientId(undefined);
+      setSelectedServiceId(undefined);
+      setUsePackage(false);
+      setIsRecurring(false);
+      setRepeatCount(2);
+      setTime(undefined);
+    }
+  }, [open]);
 
   const handleSave = async () => {
     if (!selectedClientId || !selectedServiceId || !date || !time) {
@@ -195,6 +216,8 @@ export function NewAppointmentModal({
         serviceId: selectedServiceId,
         dateTime: fullDateTime,
         packageId: usePackage && activePackage ? activePackage.id : undefined,
+        // 🔥 Envia a quantidade de vezes para repetir (ou 1 se não for recorrente)
+        repeatCount: isRecurring ? repeatCount : 1,
       });
 
       if (!result.success) {
@@ -202,7 +225,11 @@ export function NewAppointmentModal({
         return;
       }
 
-      toast.success("Agendamento criado com sucesso!");
+      toast.success(
+        isRecurring
+          ? `Agendado e repetido por ${repeatCount} semanas!`
+          : "Agendamento criado com sucesso!",
+      );
       onOpenChange(false);
       onCreated?.();
     } catch (error) {
@@ -212,20 +239,25 @@ export function NewAppointmentModal({
     }
   };
 
+  const saldoDisponivel = activePackage
+    ? activePackage.total_sessions - activePackage.used_sessions
+    : 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarClock className="h-5 w-5 text-primary" />
             Novo Agendamento
           </DialogTitle>
           <DialogDescription>
-            Escolha o serviço ou use um pacote pré-pago.
+            Escolha o serviço, a data e, se quiser, agende para as próximas
+            semanas.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-4">
+        <div className="grid gap-5 py-2">
           {/* SELEÇÃO DE CLIENTE */}
           <div className="flex flex-col gap-2">
             <Label>Cliente</Label>
@@ -233,7 +265,7 @@ export function NewAppointmentModal({
               value={selectedClientId}
               onValueChange={setSelectedClientId}
             >
-              <SelectTrigger className="bg-background rounded-xl">
+              <SelectTrigger className="bg-background rounded-xl h-11">
                 <SelectValue
                   placeholder={
                     loadingOptions ? "Carregando..." : "Selecione a cliente..."
@@ -269,20 +301,20 @@ export function NewAppointmentModal({
                     {activePackage.name}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Saldo:{" "}
-                    {activePackage.total_sessions - activePackage.used_sessions}{" "}
-                    sessões
+                    Saldo: {saldoDisponivel} sessões
                   </span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <Label className="text-xs font-bold uppercase">Usar</Label>
+                <Label className="text-xs font-bold uppercase cursor-pointer">
+                  Usar
+                </Label>
                 <Switch checked={usePackage} onCheckedChange={setUsePackage} />
               </div>
             </div>
           )}
 
-          {/* SELEÇÃO DE SERVIÇO (Bloqueado se usar pacote) */}
+          {/* SELEÇÃO DE SERVIÇO */}
           <div className="flex flex-col gap-2">
             <Label>Serviço</Label>
             <Select
@@ -292,7 +324,7 @@ export function NewAppointmentModal({
             >
               <SelectTrigger
                 className={cn(
-                  "rounded-xl bg-background",
+                  "rounded-xl bg-background h-11",
                   usePackage && "opacity-60 grayscale",
                 )}
               >
@@ -308,20 +340,20 @@ export function NewAppointmentModal({
             </Select>
             {usePackage && (
               <p className="text-[10px] text-primary font-medium italic">
-                * Serviço bloqueado porque você está usando sessões de um
-                pacote.
+                * Serviço vinculado ao pacote selecionado.
               </p>
             )}
           </div>
 
+          {/* DATA E HORA */}
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Data</Label>
+              <Label>Data (Primeira sessão)</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="rounded-xl justify-start text-left font-normal"
+                    className="rounded-xl justify-start text-left font-normal h-11"
                   >
                     <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
                     {date ? format(date, "dd/MM/yyyy") : <span>Selecione</span>}
@@ -342,7 +374,7 @@ export function NewAppointmentModal({
             <div className="flex flex-col gap-2">
               <Label>Horário</Label>
               <Select value={time} onValueChange={setTime}>
-                <SelectTrigger className="rounded-xl bg-background">
+                <SelectTrigger className="rounded-xl bg-background h-11">
                   <Clock className="mr-2 h-4 w-4 opacity-50" />
                   <SelectValue placeholder="Escolha" />
                 </SelectTrigger>
@@ -356,9 +388,63 @@ export function NewAppointmentModal({
               </Select>
             </div>
           </div>
+
+          {/* 🔥 SEÇÃO DE RECORRÊNCIA (Repetição) */}
+          <div className="border border-border/60 bg-muted/10 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Repeat className="h-4 w-4 text-muted-foreground" />
+                <Label className="font-semibold cursor-pointer">
+                  Agendamento Recorrente
+                </Label>
+              </div>
+              <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+            </div>
+
+            {isRecurring && (
+              <div className="flex items-center justify-between pt-2 border-t border-border/50 animate-in fade-in duration-200">
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">Repetir por:</span>
+                  <span className="text-xs text-muted-foreground">
+                    Ocupará a agenda nas próximas {repeatCount} semanas.
+                  </span>
+                  {usePackage && repeatCount === saldoDisponivel && (
+                    <span className="text-[10px] text-destructive font-semibold mt-1">
+                      Limite de saldo do pacote atingido.
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 bg-background border rounded-lg p-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-md hover:bg-muted"
+                    onClick={decrementRepeat}
+                    disabled={repeatCount <= 2}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-6 text-center font-bold text-sm">
+                    {repeatCount}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 rounded-md hover:bg-muted"
+                    onClick={incrementRepeat}
+                    // Se estiver usando pacote, o botão de mais trava no limite do saldo
+                    disabled={usePackage && repeatCount >= saldoDisponivel}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="pt-2">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
@@ -371,7 +457,7 @@ export function NewAppointmentModal({
             className="rounded-xl px-8 shadow-md"
             disabled={saving}
           >
-            {saving ? "Salvando..." : "Criar Agendamento"}
+            {saving ? "Salvando..." : "Confirmar na Agenda"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -6,7 +6,7 @@ import React, { useState } from "react";
 import {
   DndContext,
   PointerSensor,
-  TouchSensor, // 🔥 Adicionado o TouchSensor
+  TouchSensor,
   useSensor,
   useSensors,
   DragEndEvent,
@@ -18,7 +18,14 @@ import {
   restrictToFirstScrollableAncestor,
 } from "@dnd-kit/modifiers";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, Clock, AlertCircle, Loader2 } from "lucide-react";
+import {
+  MessageCircle,
+  Clock,
+  AlertCircle,
+  Loader2,
+  Repeat,
+  Package as PackageIcon,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { updateAppointmentDateTime } from "@/app/actions/appointments";
@@ -40,7 +47,13 @@ export interface Appointment {
   hasCharge?: boolean;
   status?: string;
   checkInTime?: string | Date | null;
-  date_time?: Date; // Data original para o cálculo
+  date_time?: Date;
+  package_id?: string | null;
+  session_number?: number | null;
+  package?: {
+    total_sessions: number;
+    used_sessions: number;
+  } | null;
 }
 
 interface DailyAgendaGridProps {
@@ -79,7 +92,6 @@ function DraggableAppointmentCard({
     transform: transform ? `translate3d(0, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 50 : 10,
     opacity: isDragging ? 0.8 : undefined,
-    // 🔥 touchAction: none impede que a página role quando o usuário tenta arrastar o card
     touchAction: "none",
   };
 
@@ -89,6 +101,20 @@ function DraggableAppointmentCard({
     date.setHours(h, m + duration);
     return `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
   };
+
+  // Lógica visual da sessão: Mostra se é pacote ou apenas recorrente
+  let displaySessionInfo = appt.sessionInfo;
+  let showPackageIcon = false;
+
+  if (appt.package_id && appt.session_number) {
+    showPackageIcon = true;
+    const total = appt.package?.total_sessions;
+    displaySessionInfo = total
+      ? `Sessão ${appt.session_number} de ${total}`
+      : `Sessão ${appt.session_number}`;
+  } else if (appt.isRecurring) {
+    displaySessionInfo = "Recorrente";
+  }
 
   return (
     <div
@@ -107,7 +133,6 @@ function DraggableAppointmentCard({
       {...listeners}
       {...attributes}
       onClick={(e) => {
-        // Evita abrir o modal se estiver apenas clicando no botão de WhatsApp ou se acabou de arrastar
         if (!isDragging) onClick();
       }}
     >
@@ -122,8 +147,17 @@ function DraggableAppointmentCard({
             >
               {appt.clientName}
             </span>
+            {/* 🔥 Correção: Ícone envolvido em tag span com title */}
             {!isCancelled && appt.hasCharge && (
-              <AlertCircle className="h-3.5 w-3.5 text-destructive animate-pulse" />
+              <span title="Cobrança Pendente" className="flex">
+                <AlertCircle className="h-3.5 w-3.5 text-destructive animate-pulse" />
+              </span>
+            )}
+            {/* 🔥 Correção: Ícone envolvido em tag span com title */}
+            {!isCancelled && appt.isRecurring && !appt.package_id && (
+              <span title="Agendamento Recorrente" className="flex">
+                <Repeat className="h-3 w-3 text-muted-foreground opacity-50" />
+              </span>
             )}
           </div>
           <span className="text-xs font-medium opacity-80 mt-1 truncate">
@@ -135,22 +169,29 @@ function DraggableAppointmentCard({
           <Button
             size="icon"
             variant="ghost"
-            onPointerDown={(e) => e.stopPropagation()} // Importante: impede o drag ao clicar no botão
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={onWhatsApp}
-            className="h-8 w-8 rounded-full bg-white/40 hover:bg-white/80 text-emerald-700 shrink-0 shadow-sm z-50"
+            className="h-8 w-8 rounded-full bg-white/40 hover:bg-white/80 text-emerald-700 shrink-0 shadow-sm z-50 transition-colors"
+            title="Enviar mensagem no WhatsApp"
           >
             <MessageCircle className="h-4 w-4" />
           </Button>
         )}
       </div>
 
-      <div className="mt-auto flex items-center gap-3 text-[10px] font-bold opacity-70 pt-2 border-t border-black/5">
+      <div className="mt-auto flex items-center justify-between text-[10px] font-bold opacity-70 pt-2 border-t border-black/5">
         <span className="flex items-center gap-1">
           <Clock className="h-3 w-3" /> {appt.time} -{" "}
           {calculateEndTime(appt.time, appt.duration)}
         </span>
-        <span className="bg-white/30 px-1.5 rounded">
-          {isCancelled ? "Cancelado" : appt.sessionInfo}
+        <span
+          className={cn(
+            "bg-white/30 px-1.5 rounded flex items-center gap-1",
+            isCancelled && "text-destructive line-through",
+          )}
+        >
+          {showPackageIcon && <PackageIcon className="h-3 w-3" />}
+          {isCancelled ? "Cancelado" : displaySessionInfo}
         </span>
       </div>
     </div>
@@ -166,13 +207,11 @@ export function DailyAgendaGrid({
 }: DailyAgendaGridProps) {
   const [isMoving, setIsMoving] = useState(false);
 
-  // 🔥 Sensores otimizados para funcionar tanto no PC quanto no Mobile
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 }, // PC: precisa mover 8px para iniciar o drag
+      activationConstraint: { distance: 8 },
     }),
     useSensor(TouchSensor, {
-      // Mobile: O usuário precisa segurar o dedo por 250ms E não mover mais que 5px (para não confundir com scroll)
       activationConstraint: {
         delay: 250,
         tolerance: 5,
@@ -199,7 +238,6 @@ export function DailyAgendaGrid({
 
     const appt = active.data.current as Appointment;
 
-    // 1. Pegamos a posição atual do card em pixels
     const pos = calculatePosition(appt.time, appt.duration);
     if (isNaN(pos.top)) {
       console.error("Erro: Posição inicial inválida para o agendamento", appt);
@@ -207,34 +245,23 @@ export function DailyAgendaGrid({
     }
 
     const newTop = pos.top + delta.y;
-
-    // 2. Converte Pixels de volta para Horário
     const minutesFromStart = (newTop / HOUR_HEIGHT) * 60;
     const totalMinutes = startHour * 60 + minutesFromStart;
-
-    // Snapping: Arredonda para o intervalo de 15 minutos mais próximo
     const snappedMinutes = Math.round(totalMinutes / 15) * 15;
-
     const newHours = Math.floor(snappedMinutes / 60);
     const newMins = snappedMinutes % 60;
 
-    // 3. Valida se o cálculo resultou em números válidos
     if (isNaN(newHours) || isNaN(newMins)) {
       toast.error("Erro ao calcular novo horário.");
       return;
     }
 
-    // 4. Valida se está dentro do horário de funcionamento
     if (newHours < startHour || newHours >= endHour) {
       toast.error("Horário fora do limite da agenda!");
       return;
     }
 
-    // 5. CRIAÇÃO DA DATA (O PONTO DO ERRO)
-    // Usamos a data que já existe no agendamento, ou a data atual como fallback
     let baseDate = appt.date_time ? new Date(appt.date_time) : new Date();
-
-    // Se a data base for inválida, criamos uma nova
     if (isNaN(baseDate.getTime())) {
       baseDate = new Date();
     }
@@ -242,7 +269,6 @@ export function DailyAgendaGrid({
     const newDate = new Date(baseDate);
     newDate.setHours(newHours, newMins, 0, 0);
 
-    // Verificação final antes do toISOString()
     if (isNaN(newDate.getTime())) {
       toast.error("Erro: Data gerada é inválida.");
       return;
@@ -250,7 +276,7 @@ export function DailyAgendaGrid({
 
     const timeString = `${newHours.toString().padStart(2, "0")}:${newMins.toString().padStart(2, "0")}`;
 
-    if (timeString === appt.time) return; // Não mudou o horário real (snapping no mesmo lugar)
+    if (timeString === appt.time) return;
 
     setIsMoving(true);
     try {
@@ -269,6 +295,7 @@ export function DailyAgendaGrid({
       setIsMoving(false);
     }
   };
+
   const HOURS_ARRAY = Array.from(
     { length: endHour - startHour + 1 },
     (_, i) => i + startHour,
@@ -289,7 +316,6 @@ export function DailyAgendaGrid({
       >
         <div className="overflow-y-auto max-h-150 relative w-full scroll-smooth">
           <div className="flex relative min-w-150" ref={setDroppableRef}>
-            {/* Linha do Tempo */}
             <div className="w-20 shrink-0 border-r border-border/50 bg-muted/5 relative z-20 pointer-events-none">
               {HOURS_ARRAY.map((hour) => (
                 <div
@@ -303,7 +329,6 @@ export function DailyAgendaGrid({
               ))}
             </div>
 
-            {/* Área dos Cards */}
             <div className="flex-1 relative bg-grid-pattern">
               {HOURS_ARRAY.map((hour) => (
                 <div
@@ -327,7 +352,13 @@ export function DailyAgendaGrid({
                       onClick={() => onAppointmentClick(appt)}
                       onWhatsApp={(e) => {
                         e.stopPropagation();
-                        window.open(`https://wa.me/${appt.phone}`, "_blank");
+                        const msg = encodeURIComponent(
+                          `Olá ${appt.clientName.split(" ")[0]}! Passando para confirmar seu horário hoje às ${appt.time} para o serviço de ${appt.service}. Podemos confirmar?`,
+                        );
+                        window.open(
+                          `https://wa.me/${appt.phone}?text=${msg}`,
+                          "_blank",
+                        );
                       }}
                     />
                   );
