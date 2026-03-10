@@ -82,13 +82,17 @@ const agendaSubItems = [
 ];
 
 const financeSubItems = [
-  { title: "Dashboard Financeiro", active: false },
-  { title: "Títulos a Receber", active: false },
-  { title: "Meios de Pagamento", active: false },
-  { title: "Gestão de Comissões", active: false },
-  { title: "Pacotes e Planos", active: false },
-  { title: "Despesas", active: false },
-  { title: "Relatórios", active: false },
+  {
+    title: "Pacotes e Planos",
+    href: "/admin/packages",
+    active: true,
+  },
+  { title: "Dashboard Financeiro", href: "#", active: false },
+  { title: "Títulos a Receber", href: "#", active: false },
+  { title: "Meios de Pagamento", href: "#", active: false },
+  { title: "Gestão de Comissões", href: "#", active: false },
+  { title: "Despesas", href: "#", active: false },
+  { title: "Relatórios", href: "#", active: false },
 ];
 
 export function AdminSidebar() {
@@ -270,11 +274,27 @@ export function AdminSidebar() {
                     <SidebarMenuSub className="border-l border-border ml-4 mt-1">
                       {financeSubItems.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.title}>
-                          <SidebarMenuSubButton className="opacity-50 cursor-not-allowed py-2">
-                            <div className="flex items-center justify-between w-full">
-                              <span className="text-xs">{subItem.title}</span>
-                              <Lock className="h-2.5 w-2.5 opacity-50" />
-                            </div>
+                          <SidebarMenuSubButton
+                            asChild={subItem.active}
+                            className={cn(
+                              "py-2",
+                              !subItem.active &&
+                                "opacity-50 cursor-not-allowed",
+                            )}
+                          >
+                            {subItem.active ? (
+                              <Link
+                                href={subItem.href}
+                                onClick={() => setOpenMobile(false)}
+                              >
+                                <span className="text-xs">{subItem.title}</span>
+                              </Link>
+                            ) : (
+                              <div className="flex items-center justify-between w-full">
+                                <span className="text-xs">{subItem.title}</span>
+                                <Lock className="h-2.5 w-2.5 opacity-50" />
+                              </div>
+                            )}
                           </SidebarMenuSubButton>
                         </SidebarMenuSubItem>
                       ))}
