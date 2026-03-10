@@ -72,9 +72,9 @@ const navItems = [
   { title: "Link na Bio", href: "/admin/link-bio", icon: Link2, active: false }, // 🔒 BLOQUEADO
 ];
 
-// 🔥 Sub-itens da Agenda (Calendário removido daqui)
+// 🔥 Sub-itens da Agenda (Recorrência ATIVADA!)
 const agendaSubItems = [
-  { title: "Agendamentos Recorrentes", href: "#", active: false },
+  { title: "Agendamentos Recorrentes", href: "/admin/recurring", active: true },
   { title: "Bloqueio de Horário", href: "#", active: false },
   { title: "Lista de Espera", href: "#", active: false },
   { title: "Confirmações e Lembretes", href: "#", active: false },
@@ -229,6 +229,10 @@ export function AdminSidebar() {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild={subItem.active}
+                            isActive={
+                              pathname.startsWith(subItem.href) &&
+                              subItem.active
+                            }
                             className={cn(
                               "py-2",
                               !subItem.active &&
@@ -276,6 +280,10 @@ export function AdminSidebar() {
                         <SidebarMenuSubItem key={subItem.title}>
                           <SidebarMenuSubButton
                             asChild={subItem.active}
+                            isActive={
+                              pathname.startsWith(subItem.href) &&
+                              subItem.active
+                            }
                             className={cn(
                               "py-2",
                               !subItem.active &&
