@@ -35,6 +35,7 @@ import {
   Minus,
   Plus,
   Package as PackageIcon,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -48,16 +49,8 @@ interface NewAppointmentModalProps {
   closingTime?: string;
 }
 
-type ClientOption = {
-  id: string;
-  name: string;
-};
-
-type ServiceOption = {
-  id: string;
-  name: string;
-};
-
+type ClientOption = { id: string; name: string };
+type ServiceOption = { id: string; name: string };
 type ActivePackage = {
   id: string;
   name: string;
@@ -94,9 +87,8 @@ export function NewAppointmentModal({
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [time, setTime] = useState<string | undefined>(undefined);
 
-  // 🔥 ESTADOS DA RECORRÊNCIA
   const [isRecurring, setIsRecurring] = useState(false);
-  const [repeatCount, setRepeatCount] = useState(2); // Começa em 2 semanas
+  const [repeatCount, setRepeatCount] = useState(2);
 
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [services, setServices] = useState<ServiceOption[]>([]);
@@ -117,12 +109,10 @@ export function NewAppointmentModal({
 
   const TIME_SLOTS = generateTimeSlots(openingTime, closingTime);
 
-  // Funções para manipular a quantidade de repetições
   const incrementRepeat = () => setRepeatCount((prev) => prev + 1);
   const decrementRepeat = () =>
     setRepeatCount((prev) => (prev > 2 ? prev - 1 : 2));
 
-  // 1. CARREGA OPÇÕES
   useEffect(() => {
     async function loadOptions() {
       if (!open) return;
@@ -132,20 +122,18 @@ export function NewAppointmentModal({
           fetch("/api/admin/clients"),
           fetch("/api/services?active=true"),
         ]);
-
         if (clientsRes.ok) {
           const data = await clientsRes.json();
           setClients(
             (data.clients ?? []).map((c: any) => ({ id: c.id, name: c.name })),
           );
         }
-
         if (servicesRes.ok) {
           const data = await servicesRes.json();
           setServices(data.map((s: any) => ({ id: s.id, name: s.name })));
         }
       } catch (error) {
-        console.error("Erro ao carregar opções:", error);
+        console.error(error);
       } finally {
         setLoadingOptions(false);
       }
@@ -153,7 +141,6 @@ export function NewAppointmentModal({
     loadOptions();
   }, [open]);
 
-  // 2. CARREGA PACOTE DO CLIENTE
   useEffect(() => {
     async function loadClientPackage() {
       if (!selectedClientId) {
@@ -167,27 +154,23 @@ export function NewAppointmentModal({
         const data = await res.json();
         setActivePackage(data.activePackage || null);
       } catch (error) {
-        console.error("Erro ao buscar pacote:", error);
+        console.error(error);
       }
     }
     loadClientPackage();
   }, [selectedClientId]);
 
-  // 3. REGRA DE NEGÓCIO: Se usar pacote, trava o serviço
-  // E sincroniza a recorrência com o saldo do pacote caso o usuário queira repetir
   useEffect(() => {
     if (usePackage && activePackage) {
       setSelectedServiceId(activePackage.service_id);
-
-      // Se a pessoa ativou a recorrência usando um pacote, o máximo de repetições é o saldo
       const saldo = activePackage.total_sessions - activePackage.used_sessions;
       if (isRecurring && repeatCount > saldo) {
-        setRepeatCount(saldo > 0 ? saldo : 1);
+        setRepeatCount(saldo > 1 ? saldo : 2);
+        if (saldo < 2) setIsRecurring(false); // Se só tem 1, não dá pra repetir
       }
     }
-  }, [usePackage, activePackage, isRecurring, repeatCount]);
+  }, [usePackage, activePackage, isRecurring]);
 
-  // Limpa o formulário ao fechar o modal
   useEffect(() => {
     if (!open) {
       setSelectedClientId(undefined);
@@ -216,7 +199,6 @@ export function NewAppointmentModal({
         serviceId: selectedServiceId,
         dateTime: fullDateTime,
         packageId: usePackage && activePackage ? activePackage.id : undefined,
-        // 🔥 Envia a quantidade de vezes para repetir (ou 1 se não for recorrente)
         repeatCount: isRecurring ? repeatCount : 1,
       });
 
@@ -227,7 +209,7 @@ export function NewAppointmentModal({
 
       toast.success(
         isRecurring
-          ? `Agendado e repetido por ${repeatCount} semanas!`
+          ? `Sucesso! Foram criados ${repeatCount} agendamentos.`
           : "Agendamento criado com sucesso!",
       );
       onOpenChange(false);
@@ -245,36 +227,39 @@ export function NewAppointmentModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5 text-primary" />
+      <DialogContent className="sm:max-w-md max-h-[95vh] overflow-y-auto rounded-3xl border-none shadow-2xl">
+        <DialogHeader className="space-y-3">
+          <div className="mx-auto bg-primary/10 p-3 rounded-full w-fit">
+            <CalendarClock className="h-6 w-6 text-primary" />
+          </div>
+          <DialogTitle className="text-center text-xl font-bold">
             Novo Agendamento
           </DialogTitle>
-          <DialogDescription>
-            Escolha o serviço, a data e, se quiser, agende para as próximas
-            semanas.
+          <DialogDescription className="text-center">
+            Configure os detalhes do serviço e horários.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-2">
-          {/* SELEÇÃO DE CLIENTE */}
-          <div className="flex flex-col gap-2">
-            <Label>Cliente</Label>
+        <div className="grid gap-5 py-4">
+          {/* CLIENTE */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Cliente
+            </Label>
             <Select
               value={selectedClientId}
               onValueChange={setSelectedClientId}
             >
-              <SelectTrigger className="bg-background rounded-xl h-11">
+              <SelectTrigger className="bg-muted/30 border-none rounded-2xl h-12 focus:ring-2 focus:ring-primary/20 transition-all">
                 <SelectValue
                   placeholder={
                     loadingOptions ? "Carregando..." : "Selecione a cliente..."
                   }
                 />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl border-none shadow-xl">
                 {clients.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
+                  <SelectItem key={c.id} value={c.id} className="rounded-lg">
                     {c.name}
                   </SelectItem>
                 ))}
@@ -282,41 +267,54 @@ export function NewAppointmentModal({
             </Select>
           </div>
 
-          {/* PACOTE ATIVO (Destaque Visual) */}
+          {/* PACOTE */}
           {activePackage && (
             <div
               className={cn(
-                "flex items-center justify-between p-4 rounded-2xl border transition-all",
+                "flex items-center justify-between p-4 rounded-2xl border-2 transition-all duration-300",
                 usePackage
-                  ? "bg-primary/10 border-primary"
-                  : "bg-muted/30 border-border/40",
+                  ? "bg-primary/5 border-primary shadow-sm"
+                  : "bg-muted/20 border-transparent",
               )}
             >
               <div className="flex items-center gap-3">
-                <div className="bg-primary/20 p-2 rounded-full">
-                  <PackageIcon className="h-4 w-4 text-primary" />
+                <div
+                  className={cn(
+                    "p-2 rounded-xl transition-colors",
+                    usePackage
+                      ? "bg-primary text-white"
+                      : "bg-background text-muted-foreground",
+                  )}
+                >
+                  <PackageIcon className="h-5 w-5" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold">
+                  <span className="text-sm font-bold leading-tight">
                     {activePackage.name}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-[11px] font-medium text-muted-foreground">
                     Saldo: {saldoDisponivel} sessões
                   </span>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <Label className="text-xs font-bold uppercase cursor-pointer">
-                  Usar
+              <div className="flex items-center gap-3">
+                <Label className="text-[10px] font-black uppercase tracking-tighter opacity-70">
+                  Utilizar
                 </Label>
-                <Switch checked={usePackage} onCheckedChange={setUsePackage} />
+                <Switch
+                  checked={usePackage}
+                  onCheckedChange={setUsePackage}
+                  className="data-[state=checked]:bg-primary"
+                />
               </div>
             </div>
           )}
 
-          {/* SELEÇÃO DE SERVIÇO */}
-          <div className="flex flex-col gap-2">
-            <Label>Serviço</Label>
+          {/* SERVIÇO */}
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+              Serviço
+            </Label>
             <Select
               disabled={loadingOptions || usePackage}
               value={selectedServiceId}
@@ -324,63 +322,66 @@ export function NewAppointmentModal({
             >
               <SelectTrigger
                 className={cn(
-                  "rounded-xl bg-background h-11",
-                  usePackage && "opacity-60 grayscale",
+                  "rounded-2xl bg-muted/30 border-none h-12 transition-all",
+                  usePackage && "bg-primary/5 text-primary font-semibold",
                 )}
               >
                 <SelectValue placeholder="Selecione o serviço..." />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-2xl border-none shadow-xl">
                 {services.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
+                  <SelectItem key={s.id} value={s.id} className="rounded-lg">
                     {s.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {usePackage && (
-              <p className="text-[10px] text-primary font-medium italic">
-                * Serviço vinculado ao pacote selecionado.
-              </p>
-            )}
           </div>
 
-          {/* DATA E HORA */}
+          {/* DATA/HORA */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex flex-col gap-2">
-              <Label>Data (Primeira sessão)</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                Data Inicial
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className="rounded-xl justify-start text-left font-normal h-11"
+                    className="w-full rounded-2xl bg-muted/30 border-none justify-start text-left font-normal h-12"
                   >
-                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
-                    {date ? format(date, "dd/MM/yyyy") : <span>Selecione</span>}
+                    <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                    {date ? format(date, "dd/MM/yy") : <span>Selecione</span>}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
+                <PopoverContent
+                  className="w-auto p-0 border-none shadow-2xl rounded-3xl"
+                  align="start"
+                >
                   <Calendar
                     mode="single"
                     selected={date}
                     onSelect={setDate}
                     locale={ptBR}
                     initialFocus
+                    className="rounded-3xl"
                   />
                 </PopoverContent>
               </Popover>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Horário</Label>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                Horário
+              </Label>
               <Select value={time} onValueChange={setTime}>
-                <SelectTrigger className="rounded-xl bg-background h-11">
-                  <Clock className="mr-2 h-4 w-4 opacity-50" />
-                  <SelectValue placeholder="Escolha" />
+                <SelectTrigger className="rounded-2xl bg-muted/30 border-none h-12">
+                  <Clock className="mr-2 h-4 w-4 text-primary" />
+                  <SelectValue placeholder="Hora" />
                 </SelectTrigger>
-                <SelectContent className="max-h-48">
+                <SelectContent className="rounded-2xl border-none shadow-xl max-h-48">
                   {TIME_SLOTS.map((slot) => (
-                    <SelectItem key={slot} value={slot}>
+                    <SelectItem key={slot} value={slot} className="rounded-lg">
                       {slot}
                     </SelectItem>
                   ))}
@@ -389,75 +390,103 @@ export function NewAppointmentModal({
             </div>
           </div>
 
-          {/* 🔥 SEÇÃO DE RECORRÊNCIA (Repetição) */}
-          <div className="border border-border/60 bg-muted/10 rounded-2xl p-4 space-y-4">
+          {/* RECORRÊNCIA */}
+          <div
+            className={cn(
+              "border-2 rounded-3xl p-4 transition-all duration-500",
+              isRecurring
+                ? "border-primary/30 bg-primary/2 shadow-inner"
+                : "border-muted/30 bg-muted/5",
+            )}
+          >
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Repeat className="h-4 w-4 text-muted-foreground" />
-                <Label className="font-semibold cursor-pointer">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "p-2 rounded-full",
+                    isRecurring
+                      ? "bg-primary/20 text-primary"
+                      : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  <Repeat className="h-4 w-4" />
+                </div>
+                <Label className="font-bold text-sm cursor-pointer">
                   Agendamento Recorrente
                 </Label>
               </div>
-              <Switch checked={isRecurring} onCheckedChange={setIsRecurring} />
+              <Switch
+                checked={isRecurring}
+                onCheckedChange={setIsRecurring}
+                disabled={usePackage && saldoDisponivel < 2}
+              />
             </div>
 
             {isRecurring && (
-              <div className="flex items-center justify-between pt-2 border-t border-border/50 animate-in fade-in duration-200">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium">Repetir por:</span>
-                  <span className="text-xs text-muted-foreground">
-                    Ocupará a agenda nas próximas {repeatCount} semanas.
-                  </span>
-                  {usePackage && repeatCount === saldoDisponivel && (
-                    <span className="text-[10px] text-destructive font-semibold mt-1">
-                      Limite de saldo do pacote atingido.
+              <div className="mt-4 pt-4 border-t border-dashed border-primary/20 animate-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-bold text-primary">
+                      Repetir semanalmente por:
                     </span>
-                  )}
-                </div>
+                    <span className="text-[10px] text-muted-foreground font-medium">
+                      Ocupará as próximas {repeatCount} semanas.
+                    </span>
+                  </div>
 
-                <div className="flex items-center gap-3 bg-background border rounded-lg p-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-md hover:bg-muted"
-                    onClick={decrementRepeat}
-                    disabled={repeatCount <= 2}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-6 text-center font-bold text-sm">
-                    {repeatCount}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-md hover:bg-muted"
-                    onClick={incrementRepeat}
-                    // Se estiver usando pacote, o botão de mais trava no limite do saldo
-                    disabled={usePackage && repeatCount >= saldoDisponivel}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-2 bg-background border shadow-sm rounded-2xl p-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary"
+                      onClick={decrementRepeat}
+                      disabled={repeatCount <= 2}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-6 text-center font-black text-sm">
+                      {repeatCount}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary"
+                      onClick={incrementRepeat}
+                      disabled={usePackage && repeatCount >= saldoDisponivel}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
         </div>
 
-        <DialogFooter className="pt-2">
+        <DialogFooter className="mt-2 sm:justify-between gap-3">
           <Button
             variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={saving}
+            className="rounded-2xl hover:bg-destructive/5 hover:text-destructive"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
-            className="rounded-xl px-8 shadow-md"
+            className="rounded-2xl px-10 h-12 shadow-lg shadow-primary/20 flex gap-2 font-bold"
             disabled={saving}
           >
-            {saving ? "Salvando..." : "Confirmar na Agenda"}
+            {saving ? (
+              "Processando..."
+            ) : (
+              <>
+                {isRecurring ? <Sparkles className="h-4 w-4" /> : null}
+                {isRecurring
+                  ? `Agendar ${repeatCount} Sessões`
+                  : "Confirmar Agendamento"}
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

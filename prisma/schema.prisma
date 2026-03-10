@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,88 +7,65 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ==========================================
-// 0. A ESTRUTURA MESTRE (O PULO DO GATO)
-// ==========================================
-
 model Organization {
-  id         String   @id @default(cuid())
-  name       String
-  slug       String   @unique
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  // Relações com o restante do sistema
-  admins            Admin[]
-  settings          Settings?
+  id                String            @id @default(cuid())
+  name              String
+  slug              String            @unique
+  created_at        DateTime          @default(now())
+  updated_at        DateTime          @updatedAt
+  appointments      Appointment[]
+  categories        Category[]
+  check_ins         CheckIn[]
+  clients           Client[]
   link_bio          LinkBio?
   message_templates MessageTemplate[]
-  clients           Client[]
-  categories        Category[]
-  services          Service[]
   package_templates PackageTemplate[]
   packages          Package[]
-  service_durations ServiceDuration[] // 🔥 ALTERADO
-  appointments      Appointment[]
-  check_ins         CheckIn[]
+  service_durations ServiceDuration[]
+  services          Service[]
+  settings          Settings?
+  admins            Admin[]           @relation("AdminToOrganization")
 
   @@map("organizations")
 }
 
-// ==========================================
-// 1. ADMIN (USUÁRIO DO SISTEMA)
-// ==========================================
-
 model Admin {
-  id           String    @id @default(cuid())
-  display_name String?  
-  email        String    @unique
-  password     String
-  
-  // 🔥 NOVOS CAMPOS
-  email_verified Boolean  @default(false)
-  verification_token String? @unique
-  reset_token    String?  @unique
-  
-  // Um Admin pode gerenciar várias organizações (filiais)
-  organizations Organization[] 
-
-  created_at   DateTime  @default(now())
-  updated_at   DateTime  @updatedAt
+  id                 String         @id @default(cuid())
+  display_name       String?
+  email              String         @unique
+  password           String
+  created_at         DateTime       @default(now())
+  updated_at         DateTime       @updatedAt
+  email_verified     Boolean        @default(false)
+  reset_token        String?        @unique
+  verification_token String?        @unique
+  organizations      Organization[] @relation("AdminToOrganization")
 
   @@map("admins")
 }
 
-// ==========================================
-// 2. CONFIGURAÇÕES E PERSONALIZAÇÃO
-// ==========================================
-
 model Settings {
-  id               String  @id @default(cuid())
-  company_name     String  // Razão Social / Nome Completo
-  trade_name       String? // 🔥 NOVO: Nome de Exibição (visível pros clientes)
-  document         String? // CNPJ ou CPF
+  id               String       @id @default(cuid())
+  company_name     String
+  document         String?
   responsible_name String?
   phone_landline   String?
   phone_whatsapp   String
   email_admin      String?
-
-  opening_time String @default("08:00")
-  closing_time String @default("19:00")
-
-  organization_id String       @unique
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  updated_at DateTime @updatedAt
+  opening_time     String       @default("08:00")
+  closing_time     String       @default("19:00")
+  organization_id  String       @unique
+  updated_at       DateTime     @updatedAt
+  trade_name       String?
+  organization     Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@map("settings")
 }
 
 model MessageTemplate {
-  id      String @id @default(cuid())
-  type    String // CONFIRMATION, REMINDER, PACKAGE_END
-  content String @db.Text
-
+  id              String       @id @default(cuid())
+  type            String
+  content         String
   organization_id String
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
@@ -100,134 +74,107 @@ model MessageTemplate {
 }
 
 model LinkBio {
-  id                String  @id @default(cuid())
+  id                String       @id @default(cuid())
   profile_image_url String?
-  bio_text          String? @db.Text
-  theme_color_light String  @default("#ffffff")
-  theme_color_dark  String  @default("#000000")
-  font_family       String  @default("Inter")
+  bio_text          String?
+  theme_color_light String       @default("#ffffff")
+  theme_color_dark  String       @default("#000000")
+  font_family       String       @default("Inter")
   social_links      Json?
-
-  organization_id String       @unique
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  organization_id   String       @unique
+  organization      Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@map("link_bio")
 }
 
-// ==========================================
-// 3. CLIENTE (ISOLADO POR ORGANIZAÇÃO)
-// ==========================================
-
 model Client {
-  id             String    @id @default(cuid())
-  name           String
-  cpf            String // Removido @unique global, agora a unicidade é por Org
-  phone_whatsapp String
-  email          String?
-  birth_date     DateTime?
-
-  // Endereço
-  zip_code String?
-  city     String?
-  street   String?
-  number   String?
-
+  id              String        @id @default(cuid())
+  name            String
+  cpf             String
+  phone_whatsapp  String
+  email           String?
+  birth_date      DateTime?
+  zip_code        String?
+  city            String?
+  street          String?
+  number          String?
   organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  appointments    Appointment[]
+  check_ins       CheckIn[]
+  organization    Organization  @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  packages        Package[]
 
-  packages     Package[]
-  appointments Appointment[]
-  check_ins    CheckIn[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@unique([cpf, organization_id]) // O CPF só é único dentro daquela empresa específica
+  @@unique([cpf, organization_id])
   @@map("clients")
 }
 
-// ==========================================
-// 4. SERVIÇOS E CATEGORIAS
-// ==========================================
-
 model Category {
-  id   String @id @default(cuid())
-  name String
+  id              String       @id @default(cuid())
+  name            String
   organization_id String
+  active          Boolean      @default(true)
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  services Service[]
-  active          Boolean   @default(true)
+  services        Service[]
+
   @@map("categories")
 }
 
 model Service {
-  id              String   @id @default(cuid())
-  name            String
-  description     String?  @db.Text
-  duration        Int
-  price           Decimal
-  active          Boolean  @default(true)
-  
-  category_id     String
-  category        Category @relation(fields: [category_id], references: [id])
-
-  organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  appointments    Appointment[]
-  packages        Package[]
-
-  package_templates PackageTemplate[] 
+  id                String            @id @default(cuid())
+  name              String
+  description       String?
+  duration          Int
+  price             Decimal
+  category_id       String
+  organization_id   String
+  active            Boolean           @default(true)
+  appointments      Appointment[]
+  package_templates PackageTemplate[]
+  packages          Package[]
+  category          Category          @relation(fields: [category_id], references: [id])
+  organization      Organization      @relation(fields: [organization_id], references: [id], onDelete: Cascade)
 
   @@map("services")
 }
-// ==========================================
-// 5. PACOTES E VOUCHERS
-// ==========================================
 
-// Localize o modelo PackageTemplate e adicione as duas linhas abaixo:
 model PackageTemplate {
-  id              String   @id @default(cuid())
+  id              String       @id @default(cuid())
   name            String
-  description     String?  @db.Text
+  description     String?
   total_sessions  Int
   price           Decimal
-  validity_days   Int?
-  service_id      String
-  service         Service  @relation(fields: [service_id], references: [id])
-  active          Boolean  @default(true)
+  active          Boolean      @default(true)
   organization_id String
+  created_at      DateTime     @default(now())
+  updated_at      DateTime     @updatedAt
+  service_id      String
+  validity_days   Int?
   organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  service         Service      @relation(fields: [service_id], references: [id])
 
   @@map("package_templates")
 }
 
-// Pacote já vendido para um cliente
 model Package {
-  id             String  @id @default(cuid())
-  name           String
-  total_sessions Int
-  used_sessions  Int     @default(0)
-  price          Decimal
-  active         Boolean @default(true)
-
-  client_id String
-  client    Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
-
-  service_id String
-  service    Service @relation(fields: [service_id], references: [id])
-
+  id              String        @id @default(cuid())
+  name            String
+  total_sessions  Int
+  used_sessions   Int           @default(0)
+  price           Decimal
+  active          Boolean       @default(true)
+  client_id       String
+  service_id      String
   organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  appointments Appointment[]
-  vouchers     Voucher[]
-  check_ins    CheckIn[]
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
+  created_at      DateTime      @default(now())
+  updated_at      DateTime      @updatedAt
+  appointments    Appointment[]
+  check_ins       CheckIn[]
+  client          Client        @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  organization    Organization  @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  service         Service       @relation(fields: [service_id], references: [id])
+  vouchers        Voucher[]
 
   @@map("packages")
 }
@@ -236,16 +183,69 @@ model Voucher {
   id         String   @id @default(cuid())
   issue_date DateTime @default(now())
   image_url  String?
-
   package_id String
-  package    Package @relation(fields: [package_id], references: [id], onDelete: Cascade)
+  package    Package  @relation(fields: [package_id], references: [id], onDelete: Cascade)
 
   @@map("vouchers")
 }
 
-// ==========================================
-// 6. AGENDA E CHECK-IN (ISOLADOS)
-// ==========================================
+model Appointment {
+  id              String            @id @default(cuid())
+  date_time       DateTime
+  status          AppointmentStatus @default(PENDENTE)
+  payment_method  PaymentMethod?
+  has_charge      Boolean           @default(false)
+  session_number  Int?
+  observations    String?
+  recurrence_id  String?
+  client_id       String
+  service_id      String
+  package_id      String?
+  organization_id String
+  created_at      DateTime          @default(now())
+  updated_at      DateTime          @updatedAt
+  client          Client            @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  organization    Organization      @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  package         Package?          @relation(fields: [package_id], references: [id])
+  service         Service           @relation(fields: [service_id], references: [id])
+  check_in        CheckIn?
+
+
+@@index([organization_id, date_time])
+  @@index([client_id, date_time])
+  @@index([recurrence_id])
+  @@map("appointments")
+}
+
+model ServiceDuration {
+  id              String       @id @default(cuid())
+  label           String
+  minutes         Int
+  is_active       Boolean      @default(true)
+  display_order   Int          @default(0)
+  organization_id String
+  created_at      DateTime     @default(now())
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+
+  @@unique([organization_id, minutes])
+  @@map("service_durations")
+}
+
+model CheckIn {
+  id              String       @id @default(cuid())
+  date_time       DateTime     @default(now())
+  appointment_id  String?      @unique
+  client_id       String?
+  package_id      String?
+  organization_id String
+  appointment     Appointment? @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
+  client          Client?      @relation(fields: [client_id], references: [id], onDelete: Cascade)
+  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
+  package         Package?     @relation(fields: [package_id], references: [id], onDelete: Cascade)
+
+  @@index([organization_id, date_time])
+  @@map("check_ins")
+}
 
 enum AppointmentStatus {
   PENDENTE
@@ -260,77 +260,4 @@ enum PaymentMethod {
   CARTAO_CREDITO
   CARTAO_DEBITO
   OUTRO
-}
-
-model Appointment {
-  id             String            @id @default(cuid())
-  date_time      DateTime
-  status         AppointmentStatus @default(PENDENTE)
-  payment_method PaymentMethod?
-  has_charge     Boolean           @default(false)
-  session_number Int?
-  observations   String?           @db.Text
-
-  client_id String
-  client    Client @relation(fields: [client_id], references: [id], onDelete: Cascade)
-
-  service_id String
-  service    Service @relation(fields: [service_id], references: [id])
-
-  package_id String?
-  package    Package? @relation(fields: [package_id], references: [id])
-
-  organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  check_in CheckIn?
-
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  @@index([organization_id, date_time])
-  @@index([client_id, date_time])
-  @@map("appointments")
-}
-
-// ==========================================
-// 5.5. OPÇÕES DE DURAÇÃO DE SERVIÇOS
-// ==========================================
-
-model ServiceDuration {
-  id          String  @id @default(cuid())
-  label       String  // Ex: "30 minutos", "1 hora e 30 minutos"
-  minutes     Int     // Valor em minutos: 30, 60, 90, etc.
-  is_active   Boolean @default(true)
-  display_order Int   @default(0) // Para ordenar na lista
-
-  organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  created_at DateTime @default(now())
-
-  @@unique([organization_id, minutes])
-  @@map("service_durations")
-}
-model CheckIn {
-  id         String   @id @default(cuid())
-  date_time  DateTime @default(now())
-
-  // Pode ou não estar ligado a um agendamento
-  appointment_id String?      @unique
-  appointment    Appointment? @relation(fields: [appointment_id], references: [id], onDelete: Cascade)
-
-  // Podem ser preenchidos depois
-  client_id  String?
-  client     Client?  @relation(fields: [client_id], references: [id], onDelete: Cascade)
-
-  package_id String?
-  package    Package? @relation(fields: [package_id], references: [id], onDelete: Cascade)
-
-  // Sempre sabemos a qual organização pertence este check-in
-  organization_id String
-  organization    Organization @relation(fields: [organization_id], references: [id], onDelete: Cascade)
-
-  @@index([organization_id, date_time])
-  @@map("check_ins")
 }

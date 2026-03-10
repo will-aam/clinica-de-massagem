@@ -1,3 +1,4 @@
+// components/agenda/appointment-details-modal.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -36,11 +37,11 @@ import {
   CalendarDays,
   User,
   CalendarX2,
-  AlertCircle,
   Trash2,
   Save,
   Loader2,
   Printer,
+  Repeat, // 🔥 Importado para indicar recorrência
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -92,7 +93,6 @@ export function AppointmentDetailsModal({
     if (open) loadSettings();
   }, [open]);
 
-  // Sincroniza dados quando o modal abre
   useEffect(() => {
     if (appointment) {
       const dbStatus = appointment.status?.toLowerCase();
@@ -113,19 +113,34 @@ export function AppointmentDetailsModal({
 
   if (!appointment) return null;
 
-  const handleSave = async (overriddenStatus?: string) => {
+  // 🔥 Verifica se o agendamento é parte de uma recorrência
+  const isRecurrent = !!appointment.recurrence_id;
+
+  const handleSave = async (
+    overriddenStatus?: string,
+    updateAllSeries = false,
+  ) => {
     setIsSaving(true);
     try {
       const targetStatus = overriddenStatus || status;
-      const result = await updateAppointment(appointment.id, {
-        status: targetStatus,
-        paymentMethod: payment,
-        observations: obs,
-        hasCharge: targetStatus === "cancelado" ? false : hasCharge,
-      });
+      const result = await updateAppointment(
+        appointment.id,
+        {
+          status: targetStatus,
+          paymentMethod: payment,
+          observations: obs,
+          hasCharge: targetStatus === "cancelado" ? false : hasCharge,
+        },
+        updateAllSeries, // 🔥 Passa se deve atualizar todos
+        appointment.recurrence_id, // 🔥 Passa o ID do grupo
+      );
 
       if (result.success) {
-        toast.success("Dados salvos com sucesso!");
+        toast.success(
+          updateAllSeries
+            ? "Toda a série foi atualizada!"
+            : "Dados salvos com sucesso!",
+        );
         onRefresh?.();
         onOpenChange(false);
       } else {
@@ -138,17 +153,22 @@ export function AppointmentDetailsModal({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (deleteAll = false) => {
     try {
-      await deleteAppointment(appointment.id);
-      toast.success("Agendamento excluído!");
+      // 🔥 Atualizado para passar os novos parâmetros
+      await deleteAppointment(
+        appointment.id,
+        deleteAll,
+        appointment.recurrence_id, // Certifique-se que o objeto appointment possui esse campo
+      );
+
+      toast.success(deleteAll ? "Série excluída!" : "Agendamento excluído!");
       onRefresh?.();
       onOpenChange(false);
     } catch (error) {
       toast.error("Erro ao excluir agendamento.");
     }
   };
-
   const calculateEndTime = (start: string, duration: number) => {
     const [h, m] = start.split(":").map(Number);
     const date = new Date();
@@ -160,8 +180,8 @@ export function AppointmentDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "w-[95vw] sm:max-w-125 p-4 sm:p-6 rounded-2xl flex flex-col max-h-[90dvh] [&>button]:hidden",
-          hasCharge ? "border-2 border-destructive shadow-lg" : "",
+          "w-[95vw] sm:max-w-125 p-4 sm:p-6 rounded-3xl flex flex-col max-h-[90dvh] [&>button]:hidden border-none shadow-2xl",
+          hasCharge ? "ring-2 ring-destructive shadow-destructive/20" : "",
         )}
       >
         <ThermalReceipt
@@ -176,120 +196,170 @@ export function AppointmentDetailsModal({
 
         <DialogHeader className="flex flex-row justify-between items-start">
           <div className="flex flex-col gap-1">
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <DialogTitle className="text-xl font-black flex items-center gap-2">
               <User className="h-5 w-5 text-primary" />
               {appointment.clientName}
             </DialogTitle>
-            <span className="text-muted-foreground text-sm">
-              {appointment.service}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm font-medium">
+                {appointment.service}
+              </span>
+              {isRecurrent && (
+                <Badge
+                  variant="secondary"
+                  className="bg-primary/10 text-primary border-none flex gap-1 items-center rounded-full px-2"
+                >
+                  <Repeat className="h-3 w-3" />
+                  Série
+                </Badge>
+              )}
+            </div>
           </div>
 
-          {/* 🔥 AlertDialog (Shadcn) substituindo o confirm() nativo do topo */}
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:text-destructive"
+                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive rounded-xl transition-colors"
               >
                 <Trash2 className="h-5 w-5" />
               </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="rounded-2xl">
+            <AlertDialogContent className="rounded-4xl border-none p-6 shadow-2xl">
               <AlertDialogHeader>
-                <AlertDialogTitle>Excluir permanentemente?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Isso apagará este agendamento do banco de dados e não deixará
-                  histórico. Para manter o histórico, use o botão "Cancelar
-                  Sessão" abaixo.
+                <AlertDialogTitle className="text-xl font-bold">
+                  Excluir Agendamento?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-base">
+                  {isRecurrent
+                    ? "Este agendamento faz parte de uma série recorrente. Como deseja proceder?"
+                    : "Isso apagará este agendamento permanentemente sem deixar histórico."}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel className="rounded-xl">
-                  Cancelar
+              <AlertDialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                <AlertDialogCancel className="rounded-2xl border-none bg-muted hover:bg-muted/80">
+                  Voltar
                 </AlertDialogCancel>
+
+                {isRecurrent && (
+                  <AlertDialogAction
+                    onClick={() => handleDelete(true)}
+                    className="bg-destructive/10 text-destructive hover:bg-destructive/20 rounded-2xl border-none font-bold"
+                  >
+                    Excluir Toda a Série
+                  </AlertDialogAction>
+                )}
+
                 <AlertDialogAction
-                  onClick={handleDelete}
-                  className="bg-destructive hover:bg-destructive/90 text-white rounded-xl"
+                  onClick={() => handleDelete(false)}
+                  className="bg-destructive text-white hover:bg-destructive/90 rounded-2xl font-bold shadow-lg shadow-destructive/20"
                 >
-                  Sim, excluir
+                  {isRecurrent ? "Apenas Este" : "Sim, excluir"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 overflow-y-auto py-2 pr-1">
-          <div className="bg-muted/30 p-3 rounded-xl flex flex-col gap-2">
-            <div className="flex justify-between items-center text-sm font-medium">
+        <div className="flex flex-col gap-5 overflow-y-auto py-4 pr-1">
+          <div className="bg-muted/30 p-4 rounded-2xl flex flex-col gap-3 border border-border/40">
+            <div className="flex justify-between items-center text-sm font-bold uppercase tracking-tighter text-muted-foreground">
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-4 w-4" /> Atendimento
               </div>
               <Badge
                 variant={status === "cancelado" ? "destructive" : "outline"}
-                className="rounded-lg"
+                className="rounded-lg border-none bg-background/50"
               >
                 {status === "cancelado"
                   ? "Cancelado"
                   : appointment.sessionInfo || "Avulso"}
               </Badge>
             </div>
-            <div className="text-sm font-semibold">
-              {appointment.time} às{" "}
+            <div className="text-2xl font-black text-primary flex items-baseline gap-1">
+              {appointment.time}
+              <span className="text-xs font-bold text-muted-foreground uppercase">
+                até
+              </span>
               {calculateEndTime(appointment.time, appointment.duration)}
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase">Status</Label>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">
+                Status
+              </Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger className="rounded-xl">
+                <SelectTrigger className="rounded-2xl h-12 bg-muted/20 border-none font-semibold">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="a_confirmar">A Confirmar</SelectItem>
-                  <SelectItem value="confirmado">Confirmado</SelectItem>
-                  <SelectItem value="realizado">Realizado</SelectItem>
-                  <SelectItem value="cancelado">Cancelado</SelectItem>
+                <SelectContent className="rounded-2xl border-none shadow-2xl">
+                  <SelectItem value="a_confirmar" className="rounded-lg">
+                    A Confirmar
+                  </SelectItem>
+                  <SelectItem value="confirmado" className="rounded-lg">
+                    Confirmado
+                  </SelectItem>
+                  <SelectItem value="realizado" className="rounded-lg">
+                    Realizado
+                  </SelectItem>
+                  <SelectItem value="cancelado" className="rounded-lg">
+                    Cancelado
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase">Pagamento</Label>
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-muted-foreground">
+                Pagamento
+              </Label>
               <Select value={payment} onValueChange={setPayment}>
-                <SelectTrigger className="rounded-xl">
+                <SelectTrigger className="rounded-2xl h-12 bg-muted/20 border-none font-semibold">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="nenhum">Aguardando...</SelectItem>
-                  <SelectItem value="pix">Pix</SelectItem>
-                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                  <SelectItem value="cartao_credito">Crédito</SelectItem>
-                  <SelectItem value="cartao_debito">Débito</SelectItem>
+                <SelectContent className="rounded-2xl border-none shadow-2xl">
+                  <SelectItem value="nenhum" className="rounded-lg">
+                    Aguardando...
+                  </SelectItem>
+                  <SelectItem value="pix" className="rounded-lg">
+                    Pix
+                  </SelectItem>
+                  <SelectItem value="dinheiro" className="rounded-lg">
+                    Dinheiro
+                  </SelectItem>
+                  <SelectItem value="cartao_credito" className="rounded-lg">
+                    Crédito
+                  </SelectItem>
+                  <SelectItem value="cartao_debito" className="rounded-lg">
+                    Débito
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase text-primary">
+          <div className="space-y-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest ml-1 text-primary">
               Observações do Recibo
             </Label>
             <Textarea
               value={obs}
               onChange={(e) => setObs(e.target.value)}
               placeholder="Digite detalhes que aparecerão no recibo..."
-              className="bg-muted/20 resize-none h-20 rounded-xl"
+              className="bg-muted/20 border-none resize-none h-24 rounded-2xl focus-visible:ring-primary/20 p-4"
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 pt-2">
             <Button
               variant={hasCharge ? "destructive" : "outline"}
-              className="rounded-xl"
+              className={cn(
+                "rounded-2xl h-12 font-bold transition-all",
+                !hasCharge && "bg-muted/20 border-none",
+              )}
               onClick={() => setHasCharge(!hasCharge)}
               disabled={status === "realizado"}
             >
@@ -298,42 +368,44 @@ export function AppointmentDetailsModal({
 
             <Button
               variant="secondary"
-              className="bg-primary/10 text-primary font-bold rounded-xl"
+              className="bg-primary/10 text-primary font-black rounded-2xl h-12 hover:bg-primary/20"
               onClick={() => {
                 handlePrint();
-                toast.success("Imprimindo...");
+                toast.success("Gerando recibo...");
               }}
             >
-              <Printer className="mr-2 h-4 w-4" /> Recibo
+              <Printer className="mr-2 h-5 w-5" /> Recibo
             </Button>
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-4 border-t mt-auto">
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-3 pt-6 border-t border-border/40 mt-auto">
           {status !== "realizado" && status !== "cancelado" && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="text-destructive w-full sm:w-auto rounded-xl"
+                  className="text-destructive hover:bg-destructive/5 font-bold w-full sm:w-auto rounded-2xl h-12"
                 >
-                  <CalendarX2 className="mr-2 h-4 w-4" /> Cancelar Sessão
+                  <CalendarX2 className="mr-2 h-5 w-5" /> Cancelar Sessão
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="rounded-2xl">
+              <AlertDialogContent className="rounded-4xl border-none shadow-2xl">
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Deseja cancelar?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    O histórico será mantido com um traço de cancelado.
+                  <AlertDialogTitle className="text-xl font-bold">
+                    Confirmar Cancelamento?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription className="text-base">
+                    O histórico será mantido com o status de cancelado.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel className="rounded-xl">
-                    Sair
+                <AlertDialogFooter className="flex gap-2">
+                  <AlertDialogCancel className="rounded-2xl border-none bg-muted">
+                    Voltar
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={() => handleSave("cancelado")}
-                    className="bg-destructive hover:bg-destructive/90 text-white rounded-xl"
+                    className="bg-destructive text-white hover:bg-destructive/90 rounded-2xl font-bold"
                   >
                     Confirmar
                   </AlertDialogAction>
@@ -347,14 +419,16 @@ export function AppointmentDetailsModal({
           <Button
             onClick={() => handleSave()}
             disabled={isSaving}
-            className="w-full sm:w-auto bg-primary rounded-xl font-bold shadow-md"
+            className="w-full sm:w-auto bg-primary text-white rounded-2xl h-12 px-10 font-black shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
           >
             {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Save className="mr-2 h-4 w-4" />
+              <>
+                <Save className="mr-2 h-5 w-5" />
+                Salvar Alterações
+              </>
             )}
-            Salvar
           </Button>
         </DialogFooter>
       </DialogContent>

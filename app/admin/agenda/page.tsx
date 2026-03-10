@@ -229,7 +229,7 @@ export default function AgendaPage() {
                 onClick={() => setIsNewModalOpen(true)}
                 className="rounded-xl flex-1 md:flex-none h-14 md:h-12 font-bold text-base md:text-sm shadow-sm"
               >
-                <Plus className="h-5 w-5 md:h-4 md:w-4 mr-2" /> Novo Agendamento
+                <Plus className="h-5 w-5 md:h-4 md:w-4 mr-2" /> Novo
               </Button>
             </div>
           </div>
