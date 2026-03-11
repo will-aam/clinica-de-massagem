@@ -1,27 +1,29 @@
 // app/api/totem/check-in/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentAdmin } from "@/lib/auth"; // 🔥 Import adicionado
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { appointment_id, organizationSlug } = body;
+    // 🔒 1. Valida a sessão do totem
+    const admin = await getCurrentAdmin();
 
-    if (!appointment_id || !organizationSlug) {
+    if (!admin || !admin.organizationId) {
       return NextResponse.json(
-        { error: "Dados obrigatórios ausentes" },
-        { status: 400 },
+        { error: "Não autorizado. Totem não está autenticado." },
+        { status: 401 },
       );
     }
 
-    const org = await prisma.organization.findUnique({
-      where: { slug: organizationSlug },
-    });
+    const body = await request.json();
 
-    if (!org) {
+    // 🔥 2. Removido o organizationSlug do body
+    const { appointment_id } = body;
+
+    if (!appointment_id) {
       return NextResponse.json(
-        { error: "Organização não encontrada" },
-        { status: 404 },
+        { error: "Dados obrigatórios ausentes" },
+        { status: 400 },
       );
     }
 
@@ -34,7 +36,8 @@ export async function POST(request: Request) {
       },
     });
 
-    if (!appt || appt.organization_id !== org.id) {
+    // 🔥 3. Verifica se o agendamento pertence à organização logada no tablet
+    if (!appt || appt.organization_id !== admin.organizationId) {
       return NextResponse.json(
         { error: "Agendamento inválido" },
         { status: 404 },
@@ -68,7 +71,7 @@ export async function POST(request: Request) {
           appointment_id: appt.id,
           client_id: appt.client_id,
           package_id: appt.package_id ?? null,
-          organization_id: appt.organization_id,
+          organization_id: appt.organization_id, // Usamos do appt, já validado acima
         },
       });
 

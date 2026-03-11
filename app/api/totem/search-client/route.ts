@@ -1,19 +1,27 @@
 // app/api/totem/search-client/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getCurrentAdmin } from "@/lib/auth"; // 🔥 Import adicionado
 
-// GET - Busca cliente pelo CPF + organização
+// GET - Busca cliente pelo CPF + organização (via sessão)
 export async function GET(request: Request) {
   try {
+    // 🔒 1. Valida a sessão do totem
+    const admin = await getCurrentAdmin();
+
+    if (!admin || !admin.organizationId) {
+      return NextResponse.json(
+        { error: "Não autorizado. Totem não está autenticado." },
+        { status: 401 },
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const cpf = searchParams.get("cpf");
-    const slug = searchParams.get("slug");
 
-    if (!cpf || !slug) {
-      return NextResponse.json(
-        { error: "CPF e slug são obrigatórios" },
-        { status: 400 },
-      );
+    // 🔥 2. Removida a validação de slug
+    if (!cpf) {
+      return NextResponse.json({ error: "CPF é obrigatório" }, { status: 400 });
     }
 
     const cleanCpf = cpf.replace(/\D/g, "");
@@ -27,21 +35,11 @@ export async function GET(request: Request) {
       new Set([cpf.trim(), cleanCpf, cpfFormatado]),
     );
 
-    const organization = await prisma.organization.findUnique({
-      where: { slug },
-    });
-
-    if (!organization) {
-      return NextResponse.json(
-        { error: "Organização não encontrada" },
-        { status: 404 },
-      );
-    }
-
+    // 🔥 3. Busca o cliente usando diretamente o ID da sessão
     const client = await prisma.client.findFirst({
       where: {
         cpf: { in: cpfCandidates },
-        organization_id: organization.id,
+        organization_id: admin.organizationId,
       },
       include: {
         packages: {

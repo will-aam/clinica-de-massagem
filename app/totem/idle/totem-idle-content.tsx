@@ -3,15 +3,12 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation"; // 🔥 Removido useSearchParams
 import { Bird, Lock, LayoutDashboard } from "lucide-react";
 
 export default function TotemIdleContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const slug = searchParams.get("slug") || "";
 
   const [clinicName, setClinicName] = useState("Totten");
   const [loading, setLoading] = useState(true);
@@ -19,9 +16,8 @@ export default function TotemIdleContent() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const res = await fetch(
-          slug ? `/api/settings/public?slug=${slug}` : "/api/settings/public",
-        );
+        // 🔥 Removida a dependência da slug na URL
+        const res = await fetch("/api/settings/public");
         if (res.ok) {
           const data = await res.json();
           setClinicName(data.tradeName || data.companyName || "Totten");
@@ -33,11 +29,15 @@ export default function TotemIdleContent() {
       }
     };
 
-    fetchSettings();
-  }, [slug]);
+    // Só busca se a sessão já terminou de carregar
+    if (status !== "loading") {
+      fetchSettings();
+    }
+  }, [status]);
 
   const handleCheckInClick = (e: React.MouseEvent) => {
-    if (!slug) {
+    // 🔥 Agora a validação é baseada puramente na sessão do tablet
+    if (status !== "authenticated") {
       e.preventDefault();
       router.push("/totem/error?type=ORG_NOT_FOUND");
     }
@@ -61,13 +61,10 @@ export default function TotemIdleContent() {
             <Bird className="h-10 w-10 md:h-12 md:w-12 text-primary-foreground" />
           </div>
 
-          {/* 🔥 Alteração principal: Container com altura fixa mínima para evitar pulos na tela */}
           <div className="space-y-1 text-center min-h-15 flex items-center justify-center w-full">
             {loading || status === "loading" ? (
-              /* 🔥 Skeleton Minimalista em vez do Loader2 */
               <div className="h-12 w-48 md:h-15 md:w-64 rounded-xl bg-muted animate-pulse mx-auto" />
             ) : (
-              /* 🔥 Adicionado um 'fade-in' suave para quando o nome aparecer */
               <h1 className="font-serif text-5xl font-bold tracking-tight text-foreground md:text-6xl animate-in fade-in duration-700">
                 {clinicName}
               </h1>
@@ -77,16 +74,17 @@ export default function TotemIdleContent() {
 
         <div className="w-full px-4 pt-4">
           <Link
-            href={slug ? `/totem/check-in?slug=${slug}` : "/totem/check-in"}
+            // 🔥 URL limpa, sem repassar slug
+            href="/totem/check-in"
             onClick={handleCheckInClick}
             className="flex h-20 w-full items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground hover:scale-[1.02] active:scale-95 transition-transform md:h-24 md:text-2xl shadow-lg"
           >
             Fazer Check-in
           </Link>
           <p className="mt-4 text-xs md:text-sm text-muted-foreground animate-pulse text-center">
-            {slug
+            {status === "authenticated"
               ? "Toque para registrar sua presença"
-              : "Organização não identificada"}
+              : "Totem não autenticado na organização"}
           </p>
         </div>
       </div>
