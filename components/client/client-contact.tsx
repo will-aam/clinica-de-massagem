@@ -21,7 +21,6 @@ import {
   X,
   Loader2,
   Share2,
-  UserX,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -200,16 +199,6 @@ export function ClientContact({ client, activePackage }: ClientContactProps) {
                 title="Editar contato"
               >
                 <Pencil className="h-4 w-4" />
-              </Button>
-
-              <Button
-                size="icon"
-                variant="ghost"
-                disabled
-                className="text-muted-foreground/40 rounded-full h-8 w-8 cursor-not-allowed"
-                title="Desativar Cliente (Em breve)"
-              >
-                <UserX className="h-4 w-4" />
               </Button>
             </>
           )}

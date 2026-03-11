@@ -94,6 +94,16 @@ export async function DELETE(
         id: id,
         organization_id: admin.organizationId,
       },
+      // 🔥 Conta o histórico do cliente antes de tomar qualquer decisão
+      include: {
+        _count: {
+          select: {
+            appointments: true,
+            check_ins: true,
+            packages: true,
+          },
+        },
+      },
     });
 
     if (!client) {
@@ -103,17 +113,31 @@ export async function DELETE(
       );
     }
 
-    await prisma.client.delete({
-      where: { id: id },
-    });
+    // 🔥 Lógica de Exclusão Inteligente
+    const hasHistory =
+      client._count.appointments > 0 ||
+      client._count.check_ins > 0 ||
+      client._count.packages > 0;
 
-    return NextResponse.json({ success: true });
+    if (hasHistory) {
+      // Tem histórico: Fazemos o SOFT DELETE (Desativar)
+      await prisma.client.update({
+        where: { id: id },
+        data: { active: false },
+      });
+      return NextResponse.json({ success: true, action: "deactivated" });
+    } else {
+      // Não tem histórico: Fazemos o HARD DELETE (Apagar do banco)
+      await prisma.client.delete({
+        where: { id: id },
+      });
+      return NextResponse.json({ success: true, action: "deleted" });
+    }
   } catch (error) {
     console.error("Erro ao deletar cliente:", error);
     return NextResponse.json({ error: "Erro no servidor" }, { status: 500 });
   }
 }
-
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> },

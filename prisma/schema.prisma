@@ -99,6 +99,7 @@ model Client {
   street          String?
   number          String?
   organization_id String
+  active          Boolean       @default(true) // 🔥 Adicione APENAS esta linha
   created_at      DateTime      @default(now())
   updated_at      DateTime      @updatedAt
   appointments    Appointment[]

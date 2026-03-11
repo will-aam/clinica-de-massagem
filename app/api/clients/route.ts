@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentAdmin } from "@/lib/auth";
 
-// GET - Lista todos os clientes da organização
+// GET - Lista todos os clientes ativos da organização
 export async function GET() {
   try {
     const admin = await getCurrentAdmin();
@@ -14,6 +14,7 @@ export async function GET() {
     const clients = await prisma.client.findMany({
       where: {
         organization_id: admin.organizationId,
+        active: true, // 🔥 Garante que só vamos listar clientes ativos
       },
       orderBy: {
         name: "asc",
@@ -30,19 +31,32 @@ export async function GET() {
           where: { active: true },
           select: {
             id: true,
-            name: true, // 🔥 Agora pedimos o nome do pacote ao banco!
+            name: true,
             used_sessions: true,
             total_sessions: true,
+          },
+        },
+        // 🔥 Conta as relações para sabermos se o cliente tem histórico
+        _count: {
+          select: {
+            appointments: true,
+            check_ins: true,
+            packages: true,
           },
         },
       },
     });
 
     const formattedClients = clients.map((client) => {
-      // Procura o primeiro pacote que ainda tem sessões sobrando
       const activePkg = client.packages.find(
         (pkg) => pkg.used_sessions < pkg.total_sessions,
       );
+
+      // 🔥 Lógica Inteligente: Se tem agendamento, check-in ou pacote = tem histórico!
+      const hasHistory =
+        client._count.appointments > 0 ||
+        client._count.check_ins > 0 ||
+        client._count.packages > 0;
 
       return {
         id: client.id,
@@ -52,8 +66,8 @@ export async function GET() {
         email: client.email,
         birth_date: client.birth_date,
         created_at: client.created_at,
-        // 🔥 Enviamos o NOME do pacote (ou nulo se não tiver pacote com sessão sobrando)
         activePackageName: activePkg ? activePkg.name : null,
+        hasHistory, // 🔥 Passamos esta info para o Frontend decidir qual botão mostrar
       };
     });
 
@@ -103,8 +117,9 @@ export async function POST(request: Request) {
     });
 
     if (existingClient) {
+      // Se ele existir mas estiver inativo, não deixamos criar de novo para evitar conflito.
       return NextResponse.json(
-        { error: "Este CPF já está cadastrado" },
+        { error: "Este CPF já está cadastrado na organização" },
         { status: 409 },
       );
     }
@@ -121,6 +136,7 @@ export async function POST(request: Request) {
         street: street || null,
         number: number || null,
         organization_id: admin.organizationId,
+        active: true, // 🔥 Garante que nasce ativo
       },
     });
 

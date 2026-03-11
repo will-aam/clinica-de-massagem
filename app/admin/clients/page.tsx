@@ -3,6 +3,8 @@
 import { useState } from "react";
 import useSWR from "swr";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,29 +18,55 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Users, Eye, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Search,
+  Users,
+  ChevronRight,
+  Trash2,
+  UserMinus,
+} from "lucide-react";
 
-// 🔥 Tipo atualizado para receber o nome do pacote
+// 🔥 Importando o AlertDialog do shadcn/ui
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 type Client = {
   id: string;
   name: string;
   cpf: string;
   phone_whatsapp: string;
   activePackageName?: string | null;
+  hasHistory?: boolean;
 };
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 const ITEMS_PER_PAGE = 5;
 
-// COMPONENTE: Item da Lista para Mobile
-function ClientMobileItem({ client }: { client: Client }) {
+function ClientMobileItem({
+  client,
+  onClick,
+  onDelete,
+}: {
+  client: Client;
+  onClick: () => void;
+  onDelete: (c: Client, e: React.MouseEvent) => void;
+}) {
   const initial = client.name.charAt(0).toUpperCase();
 
   return (
-    <Link
-      href={`/admin/clients/${client.id}`}
-      className="flex items-center justify-between py-3 px-2 -mx-2 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors active:scale-[0.98]"
+    <div
+      onClick={onClick}
+      className="flex items-center justify-between py-3 px-2 -mx-2 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors active:scale-[0.98] cursor-pointer"
     >
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold shadow-sm border border-primary/20">
@@ -54,25 +82,41 @@ function ClientMobileItem({ client }: { client: Client }) {
         </div>
       </div>
       <div className="flex items-center gap-2 text-muted-foreground/50">
-        {/* 🔥 Nome do pacote no mobile em uma tag discreta e truncada */}
         {client.activePackageName && (
           <span className="text-[10px] font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-md truncate max-w-25">
             {client.activePackageName}
           </span>
         )}
+
+        <button
+          onClick={(e) => onDelete(client, e)}
+          className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors active:scale-95"
+          title={client.hasHistory ? "Desativar Cliente" : "Excluir Cliente"}
+        >
+          {client.hasHistory ? (
+            <UserMinus className="h-4 w-4" />
+          ) : (
+            <Trash2 className="h-4 w-4" />
+          )}
+        </button>
         <ChevronRight className="h-5 w-5 shrink-0" />
       </div>
-    </Link>
+    </div>
   );
 }
 
 export default function AdminClientsPage() {
-  const { data: clients, isLoading } = useSWR<Client[]>(
-    "/api/clients",
-    fetcher,
-  );
+  const {
+    data: clients,
+    isLoading,
+    mutate,
+  } = useSWR<Client[]>("/api/clients", fetcher);
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+
+  // 🔥 Estados para controlar o modal do shadcn/ui
+  const [clientToProcess, setClientToProcess] = useState<Client | null>(null);
 
   const filtered = (clients || []).filter((c) => {
     const term = search.toLowerCase();
@@ -88,6 +132,39 @@ export default function AdminClientsPage() {
     (page - 1) * ITEMS_PER_PAGE,
     page * ITEMS_PER_PAGE,
   );
+
+  // 🔥 Agora apenas abre o modal e guarda quem foi clicado
+  const handleDeleteClick = (client: Client, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setClientToProcess(client);
+  };
+
+  // 🔥 Função que efetivamente faz a chamada à API quando confirmado no modal
+  const confirmProcess = async () => {
+    if (!clientToProcess) return;
+
+    const actionText = clientToProcess.hasHistory ? "desativar" : "excluir";
+
+    try {
+      const res = await fetch(`/api/clients/${clientToProcess.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Erro na requisição");
+
+      toast.success(
+        clientToProcess.hasHistory
+          ? "Cliente desativado com sucesso!"
+          : "Cliente excluído com sucesso!",
+      );
+      mutate();
+    } catch (error) {
+      toast.error(`Erro ao ${actionText} o cliente.`);
+    } finally {
+      // Fecha o modal ao terminar
+      setClientToProcess(null);
+    }
+  };
 
   return (
     <>
@@ -162,7 +239,12 @@ export default function AdminClientsPage() {
               <>
                 <div className="flex flex-col md:hidden">
                   {paginated.map((client) => (
-                    <ClientMobileItem key={client.id} client={client} />
+                    <ClientMobileItem
+                      key={client.id}
+                      client={client}
+                      onClick={() => router.push(`/admin/clients/${client.id}`)}
+                      onDelete={handleDeleteClick} // 🔥 Usa a nova função
+                    />
                   ))}
                 </div>
 
@@ -191,7 +273,10 @@ export default function AdminClientsPage() {
                       {paginated.map((client) => (
                         <TableRow
                           key={client.id}
-                          className="hover:bg-muted/30 transition-colors"
+                          onClick={() =>
+                            router.push(`/admin/clients/${client.id}`)
+                          }
+                          className="hover:bg-muted/30 transition-colors cursor-pointer"
                         >
                           <TableCell className="font-medium text-foreground">
                             <div className="flex items-center gap-3">
@@ -207,8 +292,6 @@ export default function AdminClientsPage() {
                           <TableCell className="text-muted-foreground">
                             {client.phone_whatsapp}
                           </TableCell>
-
-                          {/* 🔥 Nome do pacote no desktop */}
                           <TableCell className="text-center">
                             {client.activePackageName ? (
                               <span className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-semibold">
@@ -222,13 +305,21 @@ export default function AdminClientsPage() {
                           </TableCell>
 
                           <TableCell className="text-center">
-                            <Link
-                              href={`/admin/clients/${client.id}`}
-                              className="inline-flex p-2 text-muted-foreground hover:text-primary hover:bg-muted/50 rounded-full transition-colors active:scale-95"
-                              title="Ver Perfil"
+                            <button
+                              onClick={(e) => handleDeleteClick(client, e)} // 🔥 Usa a nova função
+                              className="inline-flex p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-full transition-colors active:scale-95"
+                              title={
+                                client.hasHistory
+                                  ? "Desativar Cliente"
+                                  : "Excluir Cliente"
+                              }
                             >
-                              <Eye className="h-5 w-5" />
-                            </Link>
+                              {client.hasHistory ? (
+                                <UserMinus className="h-5 w-5" />
+                              ) : (
+                                <Trash2 className="h-5 w-5" />
+                              )}
+                            </button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -268,6 +359,40 @@ export default function AdminClientsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 🔥 Modal de Confirmação Shadcn/ui */}
+      <AlertDialog
+        open={!!clientToProcess}
+        onOpenChange={(open) => !open && setClientToProcess(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {clientToProcess?.hasHistory
+                ? "Desativar Cliente"
+                : "Excluir Cliente"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {clientToProcess?.hasHistory
+                ? `Tem certeza que deseja desativar o cliente ${clientToProcess.name}? Ele não aparecerá mais nas listas, mas seu histórico (agendamentos e pacotes) será mantido para consultas futuras.`
+                : `Tem certeza que deseja excluir o cliente ${clientToProcess?.name} definitivamente? Esta ação não pode ser desfeita e os dados serão removidos do banco.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmProcess}
+              className={
+                clientToProcess?.hasHistory
+                  ? "bg-orange-600 hover:bg-orange-700 text-white"
+                  : "bg-destructive hover:bg-destructive/90"
+              }
+            >
+              {clientToProcess?.hasHistory ? "Sim, desativar" : "Sim, excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
