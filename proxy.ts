@@ -2,12 +2,15 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
-export async function middleware(request: NextRequest) {
+// Renomeado para 'proxy' conforme convenção do Next 16
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 🔥 ROTAS PÚBLICAS (não precisam de autenticação)
-  const publicPaths = [
-    "/",
+  // 🔥 ROTAS PÚBLICAS EXATAS (só permite se for estritamente igual)
+  const exactPublicPaths = ["/"];
+
+  // 🔥 ROTAS PÚBLICAS POR PREFIXO (permite se começar com esses caminhos)
+  const prefixPublicPaths = [
     "/totem/idle",
     "/totem/check-in",
     "/totem/success",
@@ -22,8 +25,10 @@ export async function middleware(request: NextRequest) {
     "/api/settings/public",
   ];
 
-  // Verifica se a rota é pública
-  const isPublicPath = publicPaths.some((path) => pathname.startsWith(path));
+  // Verifica se a rota bate com a exata OU com algum dos prefixos
+  const isPublicPath =
+    exactPublicPaths.includes(pathname) ||
+    prefixPublicPaths.some((path) => pathname.startsWith(path));
 
   if (isPublicPath) {
     return NextResponse.next();
