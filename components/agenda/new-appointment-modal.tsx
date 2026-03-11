@@ -47,6 +47,7 @@ interface NewAppointmentModalProps {
   onCreated?: () => void;
   openingTime?: string;
   closingTime?: string;
+  initialDate?: Date; // 🔥 NOVO: Recebe a data que estava selecionada na tela por trás
 }
 
 type ClientOption = { id: string; name: string };
@@ -83,8 +84,9 @@ export function NewAppointmentModal({
   onCreated,
   openingTime = "08:00",
   closingTime = "19:00",
+  initialDate,
 }: NewAppointmentModalProps) {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [date, setDate] = useState<Date | undefined>(initialDate || new Date());
   const [time, setTime] = useState<string | undefined>(undefined);
 
   const [isRecurring, setIsRecurring] = useState(false);
@@ -169,7 +171,7 @@ export function NewAppointmentModal({
         if (saldo < 2) setIsRecurring(false); // Se só tem 1, não dá pra repetir
       }
     }
-  }, [usePackage, activePackage, isRecurring]);
+  }, [usePackage, activePackage, isRecurring, repeatCount]);
 
   useEffect(() => {
     if (!open) {
@@ -179,8 +181,11 @@ export function NewAppointmentModal({
       setIsRecurring(false);
       setRepeatCount(2);
       setTime(undefined);
+    } else {
+      // 🔥 O PULO DO GATO: Atualiza a data do modal sempre que ele abrir
+      setDate(initialDate || new Date());
     }
-  }, [open]);
+  }, [open, initialDate]);
 
   const handleSave = async () => {
     if (!selectedClientId || !selectedServiceId || !date || !time) {
@@ -438,7 +443,7 @@ export function NewAppointmentModal({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary"
+                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary active:scale-95 transition-transform"
                       onClick={decrementRepeat}
                       disabled={repeatCount <= 2}
                     >
@@ -450,7 +455,7 @@ export function NewAppointmentModal({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary"
+                      className="h-8 w-8 rounded-xl hover:bg-primary/10 hover:text-primary active:scale-95 transition-transform"
                       onClick={incrementRepeat}
                       disabled={usePackage && repeatCount >= saldoDisponivel}
                     >
@@ -468,13 +473,13 @@ export function NewAppointmentModal({
             variant="ghost"
             onClick={() => onOpenChange(false)}
             disabled={saving}
-            className="rounded-2xl hover:bg-destructive/5 hover:text-destructive"
+            className="rounded-2xl text-muted-foreground hover:bg-muted active:scale-[0.98] transition-all"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
-            className="rounded-2xl px-10 h-12 flex gap-2 font-bold"
+            className="rounded-2xl px-10 h-12 flex gap-2 font-bold active:scale-[0.98] transition-all"
             disabled={saving}
           >
             {saving ? (

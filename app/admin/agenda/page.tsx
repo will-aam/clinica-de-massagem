@@ -248,6 +248,7 @@ export default function AgendaPage() {
         onOpenChange={setIsNewModalOpen}
         openingTime={openingTime}
         closingTime={closingTime}
+        initialDate={selectedDate} // 🔥 O PULO DO GATO: Passando a data selecionada pro modal
         onCreated={() => loadAppointments(selectedDate)}
       />
 
