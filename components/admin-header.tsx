@@ -1,3 +1,4 @@
+// components/admin-header.tsx
 "use client";
 
 import { useSidebar } from "@/components/ui/sidebar";

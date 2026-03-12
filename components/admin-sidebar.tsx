@@ -87,11 +87,14 @@ const financeSubItems = [
     href: "/admin/packages",
     active: true,
   },
-  { title: "Dashboard Financeiro", href: "#", active: false },
-  { title: "Títulos a Receber", href: "#", active: false },
-  { title: "Meios de Pagamento", href: "#", active: false },
-  { title: "Gestão de Comissões", href: "#", active: false },
+  { title: "Dashboard", href: "/admin/finance/dashboard", active: true },
+  { title: "Receitas", href: "#", active: false },
   { title: "Despesas", href: "#", active: false },
+  {
+    title: "Meios de Pagamento",
+    href: "/admin/finance/payment-methods",
+    active: true,
+  },
   { title: "Relatórios", href: "#", active: false },
 ];
 
