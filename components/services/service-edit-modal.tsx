@@ -26,8 +26,8 @@ import {
   Save,
   Power,
   PowerOff,
+  TrendingDown, // 🔥 Descomentado para usar no custo
   // Palette,      // TODO: Descomentar no futuro
-  // TrendingDown, // TODO: Descomentar no futuro
   // Globe,        // TODO: Descomentar no futuro
 } from "lucide-react";
 import { updateService, toggleServiceStatus } from "@/app/actions/services";
@@ -62,9 +62,8 @@ export function ServiceEditModal({
     price: "",
     duration: "",
     category_id: "",
-    // 🔥 TODO: Descomentar quando adicionar os campos no Prisma
+    cost: "", // 🔥 Adicionado o estado do custo
     // color: "#D9C6BF",
-    // cost: "",
     // isOnline: true,
   });
 
@@ -85,9 +84,8 @@ export function ServiceEditModal({
         price: service.price?.toString() || "",
         duration: service.duration?.toString() || "",
         category_id: service.category_id || "",
-        // 🔥 TODO: Descomentar quando adicionar os campos no Prisma
+        cost: service.material_cost?.toString() || "", // 🔥 Puxa o dado real do banco
         // color: service.color || "#D9C6BF",
-        // cost: service.cost?.toString() || "",
         // isOnline: service.isOnline ?? true,
       });
     }
@@ -114,7 +112,8 @@ export function ServiceEditModal({
         price: parseFloat(formData.price),
         duration: parseInt(formData.duration),
         category_id: formData.category_id,
-        // 🔥 TODO: Passar color, cost e isOnline para a action no futuro
+        // 🔥 Enviamos o material_cost para a action
+        material_cost: formData.cost ? parseFloat(formData.cost) : null,
       });
 
       if (res.success) {
@@ -150,7 +149,7 @@ export function ServiceEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 flex flex-col max-h-[90vh] overflow-hidden gap-0">
+      <DialogContent className="sm:max-w-150 p-0 flex flex-col max-h-[90vh] overflow-hidden gap-0">
         <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0">
           <DialogTitle className="text-lg">Editar Serviço</DialogTitle>
         </DialogHeader>
@@ -204,7 +203,6 @@ export function ServiceEditModal({
             />
           </div>
 
-          {/* Agrupamos Preço e Duração enquanto o Custo/Cor não entram */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="grid gap-2">
               <Label htmlFor="price">Preço de Venda (R$) *</Label>
@@ -253,69 +251,33 @@ export function ServiceEditModal({
             </div>
           </div>
 
-          {/* 🔥 TODO: Bloco comentado dos futuros campos adicionais
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/50 pt-4 mt-2">
-            <div className="grid gap-2">
-              <Label htmlFor="cost" className="flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" /> Custo (R$)
-              </Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
-                  R$
-                </span>
-                <Input
-                  id="cost"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={formData.cost}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cost: e.target.value })
-                  }
-                  className="bg-muted/50 h-10 pl-9 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
-                />
-              </div>
+          {/* 🔥 Bloco do Custo de Insumo Ativado! */}
+          <div className="grid gap-2 pt-2">
+            <Label htmlFor="cost" className="flex items-center gap-2">
+              <TrendingDown className="h-4 w-4 text-destructive" /> Custo de
+              Material (R$)
+            </Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
+                R$
+              </span>
+              <Input
+                id="cost"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                value={formData.cost}
+                onChange={(e) =>
+                  setFormData({ ...formData, cost: e.target.value })
+                }
+                className="bg-muted/50 h-10 pl-9 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]"
+              />
             </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="color" className="flex items-center gap-2">
-                <Palette className="h-4 w-4 text-muted-foreground" /> Cor na Agenda
-              </Label>
-              <div className="flex items-center gap-3">
-                <div className="relative h-10 w-10 rounded-full overflow-hidden border border-border shadow-sm shrink-0">
-                  <input
-                    type="color"
-                    id="color"
-                    value={formData.color}
-                    onChange={(e) =>
-                      setFormData({ ...formData, color: e.target.value })
-                    }
-                    className="absolute -top-2 -left-2 h-14 w-14 cursor-pointer"
-                  />
-                </div>
-                <span className="text-xs text-muted-foreground">Opcional</span>
-              </div>
-            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Gasto médio com cremes, óleos, descartáveis, etc. Será descontado
+              do seu lucro.
+            </p>
           </div>
-
-          <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-muted/20">
-            <div className="flex flex-col gap-1 pr-4">
-              <Label className="flex items-center gap-2 text-foreground font-medium">
-                <Globe className="h-4 w-4 text-primary" />
-                Agendamento Online
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Permite que os clientes agendem sozinhos.
-              </p>
-            </div>
-            <Switch
-              checked={formData.isOnline}
-              onCheckedChange={(checked) =>
-                setFormData({ ...formData, isOnline: checked })
-              }
-            />
-          </div>
-          */}
         </div>
 
         <DialogFooter className="px-6 py-4 border-t border-border/50 shrink-0 flex flex-col sm:flex-row gap-2 bg-card">

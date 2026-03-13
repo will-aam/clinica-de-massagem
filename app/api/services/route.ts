@@ -1,3 +1,4 @@
+// app/api/services/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
@@ -47,7 +48,10 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { name, description, duration, price, category_id } = body;
+
+    // 🔥 1. Pegamos o material_cost que o Front-end enviou
+    const { name, description, duration, price, category_id, material_cost } =
+      body;
 
     if (!name || !duration || !price) {
       return NextResponse.json(
@@ -83,6 +87,8 @@ export async function POST(request: Request) {
         description: description || null,
         duration: Number(duration),
         price: Number(price),
+        // 🔥 2. Salvamos no banco de dados!
+        material_cost: material_cost ? Number(material_cost) : null,
         category_id: finalCategoryId,
         organization_id: admin.organizationId,
         active: true, // Garante que nasce ativo

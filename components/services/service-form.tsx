@@ -55,13 +55,12 @@ export function ServiceForm() {
     duration: "",
     color: "#D9C6BF",
     price: "",
-    cost: "",
+    cost: "", // Nosso campo de custo de material
     isOnline: true,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // 🔥 Busca durações cadastradas
   useEffect(() => {
     const fetchDurations = async () => {
       try {
@@ -89,6 +88,10 @@ export function ServiceForm() {
     if (!form.price || Number(form.price) <= 0) {
       errs.price = "Preço deve ser maior que zero";
     }
+    // Opcional: validar se o custo é maior ou igual a zero (se preenchido)
+    if (form.cost && Number(form.cost) < 0) {
+      errs.cost = "O custo não pode ser negativo";
+    }
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -114,7 +117,8 @@ export function ServiceForm() {
           description: form.description || null,
           duration: Number(form.duration),
           price: Number(form.price),
-          // Os campos inativos não são enviados para a API por enquanto
+          // 🔥 ENVIANDO O NOVO CAMPO PARA A API
+          material_cost: form.cost ? Number(form.cost) : null,
         }),
       });
 
@@ -149,7 +153,6 @@ export function ServiceForm() {
         </CardHeader>
         <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
           <div className="grid md:grid-cols-2 gap-5">
-            {/* Nome do Serviço */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="name" className="text-foreground font-medium">
                 Nome do Serviço *
@@ -168,7 +171,6 @@ export function ServiceForm() {
               )}
             </div>
 
-            {/* Categoria com Select Inteligente */}
             <div className="flex flex-col gap-2">
               <Label
                 htmlFor="category"
@@ -185,7 +187,6 @@ export function ServiceForm() {
             </div>
           </div>
 
-          {/* Descrição */}
           <div className="flex flex-col gap-2">
             <Label
               htmlFor="description"
@@ -217,7 +218,6 @@ export function ServiceForm() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
-            {/* Duração */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="duration" className="text-foreground font-medium">
                 Duração Estimada *
@@ -305,7 +305,6 @@ export function ServiceForm() {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6 flex flex-col gap-5">
-            {/* Preço */}
             <div className="flex flex-col gap-2">
               <Label htmlFor="price" className="text-foreground font-medium">
                 Preço de Venda (R$) *
@@ -331,17 +330,15 @@ export function ServiceForm() {
               )}
             </div>
 
-            {/* 🔥 Custo de Insumo (INATIVO) */}
-            <div className="flex flex-col gap-2 opacity-60 pointer-events-none select-none">
+            {/* 🔥 Custo de Insumo (AGORA ATIVO!) */}
+            <div className="flex flex-col gap-2">
               <Label
                 htmlFor="cost"
                 className="flex items-center gap-2 text-foreground font-medium"
               >
                 <TrendingDown className="h-4 w-4 text-destructive" />
                 Custo de Material (R$)
-                <span className="ml-auto text-[10px] font-bold tracking-wider uppercase bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                  Em breve
-                </span>
+                {/* Removi o badge "Em breve" */}
               </Label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">
@@ -353,20 +350,26 @@ export function ServiceForm() {
                   step="0.01"
                   placeholder="0,00"
                   value={form.cost}
-                  disabled
                   onChange={(e) => setForm({ ...form, cost: e.target.value })}
-                  className="bg-muted/50 border-border/50 h-11 pl-9 cursor-not-allowed"
+                  className="bg-muted/50 border-border/50 h-11 pl-9"
+                  // Removi o disabled e a opacidade
                 />
               </div>
               <p className="text-[11px] text-muted-foreground">
-                Gasto médio com cremes, óleos, descartáveis, etc.
+                Gasto médio com cremes, óleos, descartáveis, etc. Será
+                descontado do seu lucro.
               </p>
+              {errors.cost && (
+                <p className="text-xs font-medium text-destructive ml-1">
+                  {errors.cost}
+                </p>
+              )}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* 🔥 BLOCO 4: Configurações Extras (Switch INATIVO) */}
+      {/* BLOCO 4: Configurações Extras (Switch INATIVO) */}
       <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card opacity-60 pointer-events-none select-none">
         <CardContent className="px-0 pt-0 md:p-6 flex items-center justify-between">
           <div className="flex flex-col gap-1 pr-4">

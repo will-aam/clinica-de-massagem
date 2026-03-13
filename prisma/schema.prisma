@@ -130,7 +130,8 @@ model Service {
   name              String
   description       String?
   duration          Int
-  price             Decimal
+  price             Decimal           @db.Decimal(10, 2)
+  material_cost     Decimal?          @db.Decimal(10, 2) // 🔥 NOVA COLUNA ADICIONADA AQUI
   category_id       String
   organization_id   String
   active            Boolean           @default(true)

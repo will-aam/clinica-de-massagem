@@ -100,11 +100,16 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
             {transaction.description}
           </span>
           <span className="text-xs text-muted-foreground leading-none flex items-center gap-1.5 truncate">
-            {formatDate(transaction.date)}
-            <span>•</span>
-            {transaction.paymentMethod
-              ? paymentMethodMap[transaction.paymentMethod]
-              : "-"}
+            {/* 1. Data (Sempre aparece) */}
+            <span>{formatDate(transaction.date)}</span>
+
+            {transaction.paymentMethod && (
+              <>
+                <span>•</span>
+                <span>{paymentMethodMap[transaction.paymentMethod]}</span>
+              </>
+            )}
+
             {transaction.clientName && (
               <>
                 <span>•</span>

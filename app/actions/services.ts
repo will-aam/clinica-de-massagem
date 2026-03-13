@@ -1,3 +1,4 @@
+// app/actions/services.ts
 "use server";
 
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,8 @@ function sanitizeService(service: any) {
   return {
     ...service,
     price: Number(service.price || 0),
+    // Garantimos que o custo de material também vire Number puro ou null
+    material_cost: service.material_cost ? Number(service.material_cost) : null,
   };
 }
 
@@ -21,6 +24,7 @@ export async function createService(data: {
   price: number;
   duration: number;
   category_id: string;
+  material_cost?: number | null; // 🔥 Novo campo adicionado
 }) {
   try {
     const admin = await requireAuth();
@@ -32,6 +36,7 @@ export async function createService(data: {
         price: data.price,
         duration: data.duration,
         category_id: data.category_id,
+        material_cost: data.material_cost, // 🔥 Salva no banco
         organization_id: admin.organizationId,
         active: true,
       },
@@ -53,6 +58,7 @@ export async function updateService(
     price?: number;
     duration?: number;
     category_id?: string;
+    material_cost?: number | null; // 🔥 Novo campo adicionado
   },
 ) {
   try {
@@ -66,6 +72,7 @@ export async function updateService(
         price: data.price,
         duration: data.duration,
         category_id: data.category_id,
+        material_cost: data.material_cost, // 🔥 Atualiza no banco
       },
     });
 

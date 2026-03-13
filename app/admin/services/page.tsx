@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { DurationManager } from "@/components/service-durations/duration-manager";
-import { cn } from "@/lib/utils"; // <-- IMPORTAÇÃO ADICIONADA AQUI
+import { cn } from "@/lib/utils";
 import {
   Plus,
   Cog,
@@ -21,6 +21,7 @@ import {
   Loader2,
   Layers,
   CalendarDays,
+  TrendingDown, // 🔥 IMPORTAÇÃO DO ÍCONE ADICIONADA AQUI
 } from "lucide-react";
 
 // Importação dos Modais
@@ -37,6 +38,7 @@ type Service = {
   description: string | null;
   duration: number;
   price: number;
+  material_cost: number | null; // 🔥 CAMPO ADICIONADO NA TIPAGEM
   active: boolean;
   category_id: string;
   category: { id: string; name: string };
@@ -195,13 +197,32 @@ function ServicesTabs() {
                           {service.category.name}
                         </Badge>
                       </div>
-                      <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                        <span className="text-xs text-muted-foreground">
-                          {formatDuration(service.duration)}
-                        </span>
-                        <span className="text-sm font-bold">
-                          {formatCurrency(Number(service.price))}
-                        </span>
+
+                      {/* 🔥 DIVISÃO DE VALORES E TEMPO ATUALIZADA */}
+                      <div className="flex flex-col gap-2 pt-2 border-t border-border/50">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />{" "}
+                            {formatDuration(service.duration)}
+                          </span>
+                          <span className="text-sm font-bold text-foreground">
+                            {formatCurrency(Number(service.price))}
+                          </span>
+                        </div>
+
+                        {/* Renderiza o custo de material se ele existir e for maior que zero */}
+                        {service.material_cost &&
+                        Number(service.material_cost) > 0 ? (
+                          <div className="flex items-center justify-between mt-0.5">
+                            <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                              <TrendingDown className="h-3 w-3 text-destructive/70" />
+                              Custo de Insumo
+                            </span>
+                            <span className="text-xs font-semibold text-destructive/80">
+                              {formatCurrency(Number(service.material_cost))}
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ))}
@@ -234,7 +255,6 @@ function ServicesTabs() {
                       <Layers className="h-3 w-3" /> {pkg.total_sessions}{" "}
                       sessões
                     </span>
-                    {/* ✅ AGORA APARECE AQUI: */}
                     {pkg.validity_days && (
                       <span className="flex items-center gap-1">
                         <CalendarDays className="h-3 w-3" /> {pkg.validity_days}{" "}
