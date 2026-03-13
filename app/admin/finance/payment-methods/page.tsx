@@ -1,7 +1,7 @@
 // app/admin/finance/payment-methods/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +22,11 @@ import {
   Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { mockPaymentMethods } from "@/lib/finance-mocks";
 import { OrganizationPaymentMethod } from "@/types/finance";
 import { PaymentMethodModal } from "@/components/finance/payment-method-modal";
+import { getPaymentMethods } from "@/app/actions/payment-methods";
+import { Skeleton } from "@/components/ui/skeleton";
 
-// Adicionámos a prop onClick ao sub-componente
 function PaymentMethodListItem({
   method,
   onClick,
@@ -35,13 +35,14 @@ function PaymentMethodListItem({
   onClick: () => void;
 }) {
   const getIcon = () => {
+    // AJUSTADO: Agora verifica os tipos exatos do seu Prisma em português
     switch (method.type) {
       case "PIX":
         return <QrCode className="h-5 w-5" />;
-      case "CREDIT_CARD":
-      case "DEBIT_CARD":
+      case "CARTAO_CREDITO":
+      case "CARTAO_DEBITO":
         return <CreditCard className="h-5 w-5" />;
-      case "CASH":
+      case "DINHEIRO":
         return <Banknote className="h-5 w-5" />;
       default:
         return <Landmark className="h-5 w-5" />;
@@ -55,15 +56,17 @@ function PaymentMethodListItem({
     }).format(val);
 
   const getTaxString = () => {
-    if (method.feePercentage === 0 && method.feeFixed === 0) return "Sem taxa";
+    const p = Number(method.feePercentage);
+    const f = Number(method.feeFixed);
+
+    if (p === 0 && f === 0) return "Sem taxa";
     const parts = [];
-    if (method.feePercentage > 0) parts.push(`${method.feePercentage}%`);
-    if (method.feeFixed > 0) parts.push(formatCurrency(method.feeFixed));
+    if (p > 0) parts.push(`${p}%`);
+    if (f > 0) parts.push(formatCurrency(f));
     return parts.join(" + ");
   };
 
   return (
-    // Adicionámos o evento onClick na div principal
     <div
       onClick={onClick}
       className="flex items-center justify-between py-3 md:py-4 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors px-2 -mx-2 rounded-lg group cursor-pointer"
@@ -130,28 +133,43 @@ function PaymentMethodListItem({
 
 export default function PaymentMethodsPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
-
-  // NOVOS ESTADOS PARA O MODAL
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedMethod, setSelectedMethod] =
     useState<OrganizationPaymentMethod | null>(null);
 
+  const [methods, setMethods] = useState<OrganizationPaymentMethod[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getPaymentMethods();
+      // Não precisa mais do .map com Number(), a Action já resolveu!
+      setMethods(data as OrganizationPaymentMethod[]);
+    } catch (error) {
+      console.error("Erro ao carregar pagamentos:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
+    loadData();
+
     const handleScroll = () => setShowScrollTop(window.scrollY > 200);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [loadData]);
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
-  // Funções para abrir o modal
   const handleNewPaymentMethod = () => {
-    setSelectedMethod(null); // Nulo = Modo Criação
+    setSelectedMethod(null);
     setIsModalOpen(true);
   };
 
   const handleEditPaymentMethod = (method: OrganizationPaymentMethod) => {
-    setSelectedMethod(method); // Passa o método = Modo Edição
+    setSelectedMethod(method);
     setIsModalOpen(true);
   };
 
@@ -166,8 +184,7 @@ export default function PaymentMethodsPage() {
               Meios de Pagamento
             </h1>
             <p className="text-muted-foreground text-sm mt-1">
-              Configure as formas de pagamento que o seu negócio aceita e as
-              respetivas taxas.
+              Configure as formas de pagamento que o seu negócio aceita.
             </p>
           </div>
 
@@ -187,20 +204,47 @@ export default function PaymentMethodsPage() {
               Configurações Atuais
             </CardTitle>
             <CardDescription>
-              Clique num item para editar as suas configurações de taxas e
-              prazos.
+              Clique num item para editar taxas e prazos.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="px-0 pb-0 md:pb-6 md:px-6">
             <div className="flex flex-col">
-              {mockPaymentMethods.map((method) => (
-                <PaymentMethodListItem
-                  key={method.id}
-                  method={method}
-                  onClick={() => handleEditPaymentMethod(method)} // Injetamos o evento aqui!
-                />
-              ))}
+              {isLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between py-4 border-b border-border/50"
+                  >
+                    <div className="flex items-center gap-4 flex-1">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <div className="space-y-2 flex flex-col items-end">
+                      <Skeleton className="h-4 w-16" />
+                      <Skeleton className="h-3 w-10" />
+                    </div>
+                  </div>
+                ))
+              ) : methods.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center bg-muted/30 rounded-lg border border-dashed border-border">
+                  <Landmark className="h-10 w-10 text-muted-foreground/40" />
+                  <p className="mt-4 text-sm font-medium text-muted-foreground">
+                    Nenhum meio de pagamento configurado.
+                  </p>
+                </div>
+              ) : (
+                methods.map((method) => (
+                  <PaymentMethodListItem
+                    key={method.id}
+                    method={method}
+                    onClick={() => handleEditPaymentMethod(method)}
+                  />
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -219,10 +263,12 @@ export default function PaymentMethodsPage() {
         <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
       </button>
 
-      {/* RENDERIZAMOS O MODAL AQUI */}
       <PaymentMethodModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          loadData();
+        }}
         method={selectedMethod}
       />
     </>

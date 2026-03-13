@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,20 +21,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// Importamos os tipos oficiais do Prisma que reexportamos em finance.ts
 import {
   TransactionType,
   TransactionStatus,
-  PaymentMethod,
+  OrganizationPaymentMethod,
 } from "@/types/finance";
-import { mockPaymentMethods } from "@/lib/finance-mocks";
-import { ArrowDownCircle, ArrowUpCircle, CalendarIcon } from "lucide-react";
+import { ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createTransaction } from "@/app/actions/transactions";
+import { getPaymentMethods } from "@/app/actions/payment-methods";
+import { useToast } from "@/hooks/use-toast";
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  type: TransactionType; // 'INCOME' (Receita) ou 'EXPENSE' (Despesa)
-  // No futuro podemos passar um 'transaction' aqui para modo de Edição
+  // A UI continua enviando INCOME/EXPENSE, nós traduzimos aqui dentro
+  type: "INCOME" | "EXPENSE";
 }
 
 export function TransactionModal({
@@ -42,57 +45,79 @@ export function TransactionModal({
   onClose,
   type,
 }: TransactionModalProps) {
-  // Estados do formulário
+  const { toast } = useToast();
+  const [isPending, startTransition] = useTransition();
+
+  // Estados do formulário usando os tipos do Prisma
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | "">("");
   const [date, setDate] = useState<string>(
     new Date().toISOString().split("T")[0],
-  ); // YYYY-MM-DD
-  const [status, setStatus] = useState<TransactionStatus>("PAID");
+  );
+  const [status, setStatus] = useState<TransactionStatus>("PAGO"); // Ajustado para PAGO
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
+
+  const [paymentMethods, setPaymentMethods] = useState<
+    OrganizationPaymentMethod[]
+  >([]);
 
   const isIncome = type === "INCOME";
 
-  // Reseta o formulário sempre que o modal abrir
   useEffect(() => {
     if (isOpen) {
+      const loadMethods = async () => {
+        const data = await getPaymentMethods();
+        setPaymentMethods(data as OrganizationPaymentMethod[]);
+      };
+      loadMethods();
+
       setDescription("");
       setAmount("");
       setDate(new Date().toISOString().split("T")[0]);
-      setStatus("PAID");
+      setStatus("PAGO"); // Reset para o valor correto do Enum
       setPaymentMethodId("");
     }
-  }, [isOpen, type]);
+  }, [isOpen]);
 
   const handleSave = () => {
-    // TODO: Integração futura com Prisma/Backend
-    console.log("Salvar Movimentação:", {
-      type,
-      description,
-      amount,
-      date,
-      status,
-      paymentMethodId,
+    if (!description || !amount || !date) return;
+
+    startTransition(async () => {
+      const result = await createTransaction({
+        // Tradução direta para o Prisma
+        type: isIncome ? "RECEITA" : "DESPESA",
+        description,
+        amount: Number(amount),
+        date,
+        status, // O status já está no formato certo (PAGO ou PENDENTE)
+        paymentMethodId: paymentMethodId || undefined,
+      });
+
+      if (result.success) {
+        toast({ title: "Sucesso", description: "Movimentação registrada!" });
+        onClose();
+      } else {
+        toast({
+          title: "Erro",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
     });
-    onClose();
   };
 
-  const isSaveDisabled = !description || !amount || !date;
-
-  // Classe mágica do Tailwind para sumir com as setinhas dos inputs de número
+  const isSaveDisabled = !description || !amount || !date || isPending;
   const hideNumberArrows =
     "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-  // Filtra apenas os meios de pagamento ativos para mostrar no Select
-  const activePaymentMethods = mockPaymentMethods.filter((pm) => pm.isActive);
-
   return (
-    <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Sheet
+      open={isOpen}
+      onOpenChange={(open) => !open && !isPending && onClose()}
+    >
       <SheetContent className="flex flex-col w-full sm:max-w-md p-0 overflow-hidden">
-        {/* Container com rolagem invisível */}
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <SheetHeader className="text-left space-y-4">
-            {/* Ícone e Título Dinâmicos baseados no Tipo */}
             <div className="flex items-center gap-3">
               <div
                 className={cn(
@@ -122,14 +147,11 @@ export function TransactionModal({
           </SheetHeader>
 
           <div className="flex flex-col gap-5 py-2">
-            {/* Valor (Em destaque) */}
             <div className="space-y-2">
               <Label
                 className={cn(
                   "text-sm font-semibold",
-                  isIncome
-                    ? "text-emerald-600 dark:text-emerald-500"
-                    : "text-rose-600 dark:text-rose-500",
+                  isIncome ? "text-emerald-600" : "text-rose-600",
                 )}
               >
                 Valor da {isIncome ? "Receita" : "Despesa"} *
@@ -141,7 +163,12 @@ export function TransactionModal({
                 <Input
                   type="number"
                   value={amount}
-                  onChange={(e) => setAmount(Number(e.target.value))}
+                  onChange={(e) =>
+                    setAmount(
+                      e.target.value === "" ? "" : Number(e.target.value),
+                    )
+                  }
+                  disabled={isPending}
                   className={cn(
                     "h-14 rounded-xl pl-10 text-xl font-bold",
                     hideNumberArrows,
@@ -151,83 +178,78 @@ export function TransactionModal({
               </div>
             </div>
 
-            {/* Descrição */}
             <div className="space-y-2">
               <Label>Descrição *</Label>
               <Input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder={
-                  isIncome
-                    ? "Ex: Pacote de Depilação - Maria"
-                    : "Ex: Conta de Luz"
-                }
+                disabled={isPending}
+                placeholder={isIncome ? "Ex: Venda de Produto" : "Ex: Aluguel"}
                 className="h-12 rounded-xl"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              {/* Data */}
               <div className="space-y-2">
                 <Label>Data *</Label>
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="h-12 rounded-xl"
-                  />
-                </div>
+                <Input
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                  disabled={isPending}
+                  className="h-12 rounded-xl"
+                />
               </div>
 
-              {/* Status */}
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select
                   value={status}
                   onValueChange={(val) => setStatus(val as TransactionStatus)}
+                  disabled={isPending}
                 >
                   <SelectTrigger className="h-12 rounded-xl">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
-                    <SelectItem value="PAID">Pago / Realizado</SelectItem>
-                    <SelectItem value="PENDING">Pendente / A Pagar</SelectItem>
+                    <SelectItem value="PAGO">Pago / Realizado</SelectItem>
+                    <SelectItem value="PENDENTE">Pendente</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
-            {/* Meio de Pagamento */}
             <div className="space-y-2">
               <Label>Meio de Pagamento</Label>
               <Select
                 value={paymentMethodId}
                 onValueChange={setPaymentMethodId}
+                disabled={isPending}
               >
                 <SelectTrigger className="h-12 rounded-xl">
-                  <SelectValue placeholder="Selecione como foi pago" />
+                  <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {/* Puxando os métodos dinamicamente do nosso Mock! */}
-                  {activePaymentMethods.map((pm) => (
-                    <SelectItem key={pm.id} value={pm.id}>
-                      {pm.name}
-                    </SelectItem>
-                  ))}
+                  {paymentMethods
+                    .filter((pm) => pm.isActive)
+                    .map((pm) => (
+                      <SelectItem key={pm.id} value={pm.id}>
+                        {pm.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
         </div>
 
-        {/* Rodapé Fixo */}
         <div className="p-6 pt-4 border-t border-border/50 bg-background">
-          <SheetFooter className="flex-row gap-2 sm:gap-2">
+          <SheetFooter className="flex-row gap-2">
             <Button
               variant="outline"
               className="flex-1 h-12 rounded-xl"
               onClick={onClose}
+              disabled={isPending}
             >
               Cancelar
             </Button>
@@ -241,7 +263,11 @@ export function TransactionModal({
               onClick={handleSave}
               disabled={isSaveDisabled}
             >
-              Salvar
+              {isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                "Salvar"
+              )}
             </Button>
           </SheetFooter>
         </div>

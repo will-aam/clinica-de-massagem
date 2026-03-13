@@ -6,21 +6,27 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MinusCircle, PlusCircle } from "lucide-react";
 import { TransactionModal } from "@/components/finance/transaction-modal";
-import { TransactionType } from "@/types/finance";
 
-export function FinanceHeader() {
+interface FinanceHeaderProps {
+  onSuccess?: () => void;
+}
+
+export function FinanceHeader({ onSuccess }: FinanceHeaderProps) {
   // Estados para controlar o modal
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [transactionType, setTransactionType] =
-    useState<TransactionType>("INCOME");
+
+  // AJUSTE: Usamos as strings literais que o modal espera para a interface
+  const [transactionType, setTransactionType] = useState<"INCOME" | "EXPENSE">(
+    "INCOME",
+  );
 
   const handleNewIncome = () => {
-    setTransactionType("INCOME"); // Avisa o modal que é uma Receita
+    setTransactionType("INCOME");
     setIsModalOpen(true);
   };
 
   const handleNewExpense = () => {
-    setTransactionType("EXPENSE"); // Avisa o modal que é uma Despesa
+    setTransactionType("EXPENSE");
     setIsModalOpen(true);
   };
 
@@ -34,7 +40,6 @@ export function FinanceHeader() {
           </p>
         </div>
 
-        {/* Botoes empilhados no mobile e lado a lado no desktop */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
           <Button
             variant="outline"
@@ -55,10 +60,12 @@ export function FinanceHeader() {
         </div>
       </div>
 
-      {/* Renderiza o modal mágico aqui (invisível até isModalOpen ser true) */}
       <TransactionModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          if (onSuccess) onSuccess();
+        }}
         type={transactionType}
       />
     </>

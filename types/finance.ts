@@ -1,20 +1,18 @@
 // types/finance.ts
+import { PaymentMethod } from "@prisma/client";
 
-export type TransactionType = "INCOME" | "EXPENSE";
-export type TransactionStatus = "PAID" | "PENDING" | "OVERDUE";
-export type PaymentMethod =
-  | "PIX"
-  | "CREDIT_CARD"
-  | "DEBIT_CARD"
-  | "CASH"
-  | "OTHER";
+// Exportamos para o resto do sistema usar a definição oficial do Banco de Dados
+export { PaymentMethod };
+
+export type TransactionType = "RECEITA" | "DESPESA";
+export type TransactionStatus = "PAGO" | "PENDENTE" | "ATRASADO";
 
 export interface Transaction {
   id: string;
   type: TransactionType;
   description: string;
   amount: number;
-  date: string; // ISO string ou YYYY-MM-DD
+  date: string;
   paymentMethod?: PaymentMethod;
   status: TransactionStatus;
   clientId?: string;
@@ -35,13 +33,12 @@ export interface SecondaryIndicators {
   topPaymentMethod: PaymentMethod | null;
 }
 
-// NOVO: Interface para a configuração dos meios de pagamento da clínica/salão
 export interface OrganizationPaymentMethod {
   id: string;
-  type: PaymentMethod; // O enum base do sistema
-  name: string; // Nome customizado (ex: "Cartão de Crédito - Stone")
-  isActive: boolean; // Se o cliente aceita ou não essa forma
-  feePercentage: number; // Taxa em % (ex: 1.99)
-  feeFixed: number; // Taxa fixa em R$ (ex: 0.50)
-  daysToReceive: number; // Dias para o dinheiro cair na conta (0 = na hora)
+  type: PaymentMethod;
+  name: string;
+  isActive: boolean;
+  feePercentage: number;
+  feeFixed: number;
+  daysToReceive: number;
 }

@@ -16,9 +16,9 @@ interface RecentTransactionsListProps {
   data: Transaction[];
 }
 
-// Sub-componente para renderizar cada item da lista (Mobile First)
 function TransactionListItem({ transaction }: { transaction: Transaction }) {
-  const isIncome = transaction.type === "INCOME";
+  // AJUSTADO: Comparação com o Enum do Prisma
+  const isIncome = transaction.type === "RECEITA";
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -34,18 +34,18 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
     }).format(new Date(dateString));
   };
 
+  // AJUSTADO: Mapeamento para os nomes exatos do seu Prisma
   const paymentMethodMap: Record<PaymentMethod, string> = {
     PIX: "Pix",
-    CREDIT_CARD: "Crédito",
-    DEBIT_CARD: "Débito",
-    CASH: "Dinheiro",
-    OTHER: "Outros",
+    CARTAO_CREDITO: "Crédito",
+    CARTAO_DEBITO: "Débito",
+    DINHEIRO: "Dinheiro",
+    OUTRO: "Outros",
   };
 
-  // Renderizador do badge de status
   const StatusBadge = ({ status }: { status: TransactionStatus }) => {
     switch (status) {
-      case "PAID":
+      case "PAGO": // Ajustado de PAID para PAGO
         return (
           <Badge
             variant="secondary"
@@ -54,7 +54,7 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
             Pago
           </Badge>
         );
-      case "PENDING":
+      case "PENDENTE": // Ajustado de PENDING para PENDENTE
         return (
           <Badge
             variant="secondary"
@@ -63,7 +63,7 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
             Pendente
           </Badge>
         );
-      case "OVERDUE":
+      case "ATRASADO": // Ajustado de OVERDUE para ATRASADO
         return (
           <Badge
             variant="secondary"
@@ -79,7 +79,6 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
 
   return (
     <div className="flex items-center justify-between py-3 md:py-4 border-b border-border/50 last:border-0 hover:bg-muted/30 transition-colors px-2 -mx-2 rounded-lg group">
-      {/* Bloco da Esquerda: Ícone e Detalhes */}
       <div className="flex items-center gap-3 md:gap-4 flex-1 min-w-0 pr-4">
         <div
           className={cn(
@@ -116,7 +115,6 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
         </div>
       </div>
 
-      {/* Bloco da Direita: Valor e Status */}
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span
           className={cn(
@@ -134,10 +132,8 @@ function TransactionListItem({ transaction }: { transaction: Transaction }) {
   );
 }
 
-// Componente Principal
 export function RecentTransactionsList({ data }: RecentTransactionsListProps) {
   return (
-    // No mobile fica transparente/sem borda, no desktop ganha formato de Card
     <Card className="border-0 shadow-none bg-transparent md:border md:shadow-sm md:bg-card mt-2 md:mt-0">
       <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
         <CardTitle className="flex items-center gap-2 text-card-foreground">
@@ -145,7 +141,7 @@ export function RecentTransactionsList({ data }: RecentTransactionsListProps) {
           Histórico Recente
         </CardTitle>
         <CardDescription>
-          Últimas movimentações financeiras registadas
+          Últimas movimentações financeiras registradas
         </CardDescription>
       </CardHeader>
 

@@ -1,70 +1,105 @@
 // app/admin/finance/dashboard/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { AdminHeader } from "@/components/admin-header";
 import { FinanceHeader } from "@/components/finance/finance-header";
 import { FinanceSecondaryIndicators } from "@/components/finance/finance-secondary-indicators";
 import { FinanceSummaryCards } from "@/components/finance/finance-summary-cards";
 import { RecentTransactionsList } from "@/components/finance/recent-transactions-list";
-import {
-  mockFinanceSummary,
-  mockRecentTransactions,
-  mockSecondaryIndicators,
-} from "@/lib/finance-mocks";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getFinanceDashboardData } from "@/app/actions/finance-dashboard";
+import {
+  FinanceSummary,
+  SecondaryIndicators,
+  Transaction,
+} from "@/types/finance";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function FinanceDashboardPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Lógica para mostrar/esconder o botão de voltar ao topo
-  useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 200);
-    };
+  // Estados para os dados reais
+  const [summaryData, setSummaryData] = useState<FinanceSummary | null>(null);
+  const [secondaryData, setSecondaryData] =
+    useState<SecondaryIndicators | null>(null);
+  const [recentTransactions, setRecentTransactions] = useState<Transaction[]>(
+    [],
+  );
 
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+  const loadDashboard = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await getFinanceDashboardData();
+      if (data) {
+        setSummaryData(data.summary);
+        setSecondaryData(data.secondary);
+        setRecentTransactions(data.recentTransactions);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar dashboard:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  useEffect(() => {
+    loadDashboard();
 
-  // Dados mockados (no futuro virão via SWR ou Server Actions)
-  const summaryData = mockFinanceSummary;
-  const secondaryData = mockSecondaryIndicators;
-  const recentTransactions = mockRecentTransactions;
+    const handleScroll = () => setShowScrollTop(window.scrollY > 200);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [loadDashboard]);
+
+  const scrollToTop = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
   return (
     <>
-      {/* Header Global do Admin */}
       <AdminHeader title="Financeiro" />
 
-      {/* Container Principal Mobile First */}
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto w-full pb-24 md:pb-6 relative">
-        {/* Cabeçalho Local: Título da Seção e Botões de Ação */}
         <FinanceHeader />
 
-        {/* Cards Principais (Scroll Horizontal no Mobile, Grid no Desktop) */}
-        <FinanceSummaryCards data={summaryData} />
+        {isLoading ? (
+          // SKELETONS: Mantém o layout enquanto carrega
+          <div className="space-y-8">
+            <div className="flex gap-4 overflow-hidden">
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 md:flex-1 rounded-2xl" />
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 md:flex-1 rounded-2xl md:block hidden" />
+              <Skeleton className="h-32 min-w-[85vw] md:min-w-0 md:flex-1 rounded-2xl lg:block hidden" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Skeleton className="h-20 rounded-xl" />
+              <Skeleton className="h-20 rounded-xl" />
+              <Skeleton className="h-20 rounded-xl" />
+              <Skeleton className="h-20 rounded-xl" />
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Cards Principais */}
+            {summaryData && <FinanceSummaryCards data={summaryData} />}
 
-        {/* Indicadores Secundários (Grid 2x2 no Mobile, 4x1 no Desktop) */}
-        <div className="mt-2 md:mt-0">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">
-            Visão Rápida
-          </h3>
-          <FinanceSecondaryIndicators data={secondaryData} />
-        </div>
+            {/* Indicadores Secundários */}
+            <div className="mt-2 md:mt-0">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">
+                Visão Rápida
+              </h3>
+              {secondaryData && (
+                <FinanceSecondaryIndicators data={secondaryData} />
+              )}
+            </div>
 
-        {/* Lista de Histórico (Cards sem borda no mobile, Card com borda no desktop) */}
-        <div className="mt-2 md:mt-0">
-          <RecentTransactionsList data={recentTransactions} />
-        </div>
+            {/* Lista de Histórico */}
+            <div className="mt-2 md:mt-0">
+              <RecentTransactionsList data={recentTransactions} />
+            </div>
+          </>
+        )}
       </div>
 
-      {/* Botão Flutuante de Voltar ao Topo */}
       <button
         onClick={scrollToTop}
         className={cn(
