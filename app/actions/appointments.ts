@@ -91,12 +91,12 @@ export async function createAppointment(
   }
 }
 
-// --- 2. ATUALIZAR (INDIVIDUAL OU SÉRIE) ---
+// --- 2. ATUALIZAR E GERAR DESPESA AUTOMÁTICA ---
 export async function updateAppointment(
   id: string,
   data: {
     status: string;
-    paymentMethod: string;
+    paymentMethod: string | null; // Agora aceita o null enviado pelo modal
     observations: string;
     hasCharge: boolean;
   },
@@ -115,19 +115,14 @@ export async function updateAppointment(
       realizado: AppointmentStatus.REALIZADO,
     };
 
-    const paymentMap: Record<string, PaymentMethod> = {
-      pix: PaymentMethod.PIX,
-      dinheiro: PaymentMethod.DINHEIRO,
-      cartao_credito: PaymentMethod.CARTAO_CREDITO,
-      cartao_debito: PaymentMethod.CARTAO_DEBITO,
-      transferencia: PaymentMethod.OUTRO,
-    };
-
     const finalStatus = statusMap[data.status] || AppointmentStatus.PENDENTE;
-    const finalPaymentMethod =
-      data.paymentMethod === "nenhum"
-        ? null
-        : paymentMap[data.paymentMethod] || null;
+
+    // O Modal de detalhes agora envia os métodos com os nomes reais do Prisma
+    // ex: "PIX", "CARTAO_CREDITO", então podemos fazer cast direto (ou null)
+    const finalPaymentMethod = data.paymentMethod
+      ? (data.paymentMethod as PaymentMethod)
+      : null;
+
     let finalHasCharge = data.hasCharge;
 
     if (
@@ -137,9 +132,10 @@ export async function updateAppointment(
       finalHasCharge = false;
     if (finalStatus === AppointmentStatus.CANCELADO) finalHasCharge = false;
 
+    // 🔥 Adicionado: Buscar o material_cost e o nome do serviço para a despesa
     const currentAppt = await prisma.appointment.findUnique({
       where: { id, organization_id: admin.organizationId },
-      select: { package_id: true, status: true },
+      include: { service: true, client: true },
     });
 
     if (!currentAppt)
@@ -162,19 +158,19 @@ export async function updateAppointment(
             status: finalStatus,
             payment_method: finalPaymentMethod,
             has_charge: finalHasCharge,
-            observations: data.observations, // ✅ Adicionado
+            observations: data.observations,
           },
         });
 
-        // 2. Se marcar a série como realizada, desconta o número exato de afetados
+        // 2. Desconta os pacotes da série
         if (isMarkingAsDone && currentAppt.package_id) {
           await tx.package.update({
             where: { id: currentAppt.package_id },
-            data: { used_sessions: { increment: updateResult.count } }, // ✅ Desconto dinâmico
+            data: { used_sessions: { increment: updateResult.count } },
           });
         }
       } else {
-        // Atualização individual (Mantida)
+        // 1. Atualiza o agendamento individual
         await tx.appointment.update({
           where: { id, organization_id: admin.organizationId },
           data: {
@@ -185,6 +181,7 @@ export async function updateAppointment(
           },
         });
 
+        // 2. Desconta o pacote individual
         if (isMarkingAsDone && currentAppt.package_id) {
           await tx.package.update({
             where: { id: currentAppt.package_id },
@@ -196,6 +193,8 @@ export async function updateAppointment(
 
     revalidatePath("/admin/agenda");
     revalidatePath("/admin/packages");
+    revalidatePath("/admin/finance/dashboard"); // 🔥 Avisa o Dashboard pra recalcular!
+
     return { success: true };
   } catch (error) {
     console.error(error);
@@ -226,6 +225,7 @@ export async function deleteAppointment(
     }
 
     revalidatePath("/admin/agenda");
+    revalidatePath("/admin/finance/dashboard");
     return { success: true };
   } catch (error) {
     console.error(error);

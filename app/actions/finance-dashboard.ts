@@ -4,14 +4,6 @@
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import {
-  startOfMonth,
-  endOfMonth,
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-} from "date-fns";
 import { PaymentMethod } from "@prisma/client";
 
 async function getAdminOrg() {
@@ -26,20 +18,66 @@ async function getAdminOrg() {
   return admin.organizations[0].id;
 }
 
-export async function getFinanceDashboardData() {
+export async function getFinanceDashboardData(month?: number, year?: number) {
   try {
     const organizationId = await getAdminOrg();
     const now = new Date();
 
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
-    const todayStart = startOfDay(now);
-    const todayEnd = endOfDay(now);
-    const weekStart = startOfWeek(now, { weekStartsOn: 0 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 0 });
+    const targetMonth = month ? month - 1 : now.getMonth();
+    const targetYear = year || now.getFullYear();
 
-    // 1. Buscar Agendamentos REALIZADOS no mês inteiro
-    const completedAppointments = await prisma.appointment.findMany({
+    // 1. LIMITES DO MÊS FILTRADO (Fuso Local)
+    const monthStart = new Date(targetYear, targetMonth, 1, 0, 0, 0);
+    const monthEnd = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59, 999);
+
+    // 2. LIMITES DE HOJE E ONTEM (Para Visão Rápida e Histórico Recente)
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+    );
+    const todayEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      23,
+      59,
+      59,
+      999,
+    );
+    const yesterdayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - 1,
+      0,
+      0,
+      0,
+    );
+
+    const dayOfWeek = now.getDay();
+    const weekStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() - dayOfWeek,
+      0,
+      0,
+      0,
+    );
+    const weekEnd = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + (6 - dayOfWeek),
+      23,
+      59,
+      59,
+      999,
+    );
+
+    // --- BUSCA DOS DADOS DO MÊS FILTRADO ---
+    const filteredAppointments = await prisma.appointment.findMany({
       where: {
         organization_id: organizationId,
         status: "REALIZADO",
@@ -48,8 +86,7 @@ export async function getFinanceDashboardData() {
       include: { service: true, client: true },
     });
 
-    // 2. Buscar Transações Manuais do mês
-    const monthTransactions = await prisma.transaction.findMany({
+    const filteredTransactions = await prisma.transaction.findMany({
       where: {
         organization_id: organizationId,
         date: { gte: monthStart, lte: monthEnd },
@@ -58,34 +95,63 @@ export async function getFinanceDashboardData() {
       include: { client: true, payment_method: true },
     });
 
-    // --- CÁLCULOS DO SUMÁRIO (CARDS PRINCIPAIS) ---
-    const incomeFromAppts = completedAppointments.reduce(
-      (acc, curr) => acc + Number(curr.service.price),
-      0,
-    );
-    const incomeFromTx = monthTransactions
-      .filter((t) => t.type === "RECEITA" && t.status === "PAGO")
-      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+    // --- CÁLCULOS DOS CARDS DO MÊS FILTRADO ---
 
-    // 🔥 AGORA SOMAMOS O CUSTO DE MATERIAL DAS CONSULTAS REALIZADAS
-    const expensesFromAppts = completedAppointments.reduce(
+    // Receitas da Agenda (Só soma se o método de pagamento foi preenchido)
+    const incomeFromAppts = filteredAppointments
+      .filter((a) => a.payment_method !== null)
+      .reduce((acc, curr) => acc + Number(curr.service.price), 0);
+
+    // Pendentes da Agenda (Realizados mas aguardando pagamento)
+    const pendingFromAppts = filteredAppointments
+      .filter((a) => a.payment_method === null)
+      .reduce((acc, curr) => acc + Number(curr.service.price), 0);
+
+    // Despesas de Insumos da Agenda (Independente de pagamento, o material foi gasto)
+    const expensesFromAppts = filteredAppointments.reduce(
       (acc, curr) => acc + Number(curr.service.material_cost || 0),
       0,
     );
-    const expensesFromTx = monthTransactions
+
+    // Transações Manuais (Receitas e Despesas Avulsas)
+    const incomeFromTx = filteredTransactions
+      .filter((t) => t.type === "RECEITA" && t.status === "PAGO")
+      .reduce((acc, curr) => acc + Number(curr.amount), 0);
+
+    const expensesFromTx = filteredTransactions
       .filter((t) => t.type === "DESPESA" && t.status === "PAGO")
       .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-    const pendingFromTx = monthTransactions
+    const pendingFromTx = filteredTransactions
       .filter((t) => t.status === "PENDENTE")
       .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-    // --- CÁLCULOS DOS INDICADORES SECUNDÁRIOS ---
+    // --- CÁLCULOS DA VISÃO RÁPIDA (SEMPRE A SEMANA ATUAL) ---
+    const currentWeekAppointments = await prisma.appointment.findMany({
+      where: {
+        organization_id: organizationId,
+        status: "REALIZADO",
+        date_time: { gte: weekStart, lte: weekEnd },
+      },
+      include: { service: true },
+    });
+    const currentWeekTransactions = await prisma.transaction.findMany({
+      where: {
+        organization_id: organizationId,
+        date: { gte: weekStart, lte: weekEnd },
+      },
+    });
+
     const receivedToday =
-      completedAppointments
-        .filter((a) => a.date_time >= todayStart && a.date_time <= todayEnd)
+      currentWeekAppointments
+        .filter(
+          (a) =>
+            a.date_time >= todayStart &&
+            a.date_time <= todayEnd &&
+            a.payment_method !== null,
+        )
         .reduce((acc, curr) => acc + Number(curr.service.price), 0) +
-      monthTransactions
+      currentWeekTransactions
         .filter(
           (t) =>
             t.type === "RECEITA" &&
@@ -96,27 +162,21 @@ export async function getFinanceDashboardData() {
         .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
     const receivedWeek =
-      completedAppointments
-        .filter((a) => a.date_time >= weekStart && a.date_time <= weekEnd)
+      currentWeekAppointments
+        .filter((a) => a.payment_method !== null)
         .reduce((acc, curr) => acc + Number(curr.service.price), 0) +
-      monthTransactions
-        .filter(
-          (t) =>
-            t.type === "RECEITA" &&
-            t.status === "PAGO" &&
-            t.date >= weekStart &&
-            t.date <= weekEnd,
-        )
+      currentWeekTransactions
+        .filter((t) => t.type === "RECEITA" && t.status === "PAGO")
         .reduce((acc, curr) => acc + Number(curr.amount), 0);
 
-    // Descobrir o Meio de Pagamento mais usado
+    // --- MEIO DE PAGAMENTO FAVORITO (DO MÊS FILTRADO) ---
     const paymentCounts: Record<string, number> = {};
-    completedAppointments.forEach((a) => {
+    filteredAppointments.forEach((a) => {
       if (a.payment_method)
         paymentCounts[a.payment_method] =
           (paymentCounts[a.payment_method] || 0) + 1;
     });
-    monthTransactions.forEach((t) => {
+    filteredTransactions.forEach((t) => {
       if (
         t.type === "RECEITA" &&
         t.status === "PAGO" &&
@@ -136,23 +196,24 @@ export async function getFinanceDashboardData() {
       }
     }
 
-    // --- MONTAR HISTÓRICO RECENTE DINÂMICO ---
-    const historyFromAppts = completedAppointments.flatMap((a) => {
+    // --- MONTAR HISTÓRICO (APENAS ONTEM E HOJE) ---
+    const historyFromAppts = filteredAppointments.flatMap((a) => {
       const items = [];
 
-      // Linha 1: A Receita (O valor pago pelo cliente)
+      // Linha 1: A Receita (Se estiver sem pagamento, aparece como PENDENTE amarelo)
       items.push({
         id: `rec_${a.id}`,
         type: "RECEITA" as const,
         description: a.service.name,
         amount: Number(a.service.price),
         date: a.date_time.toISOString(),
-        status: "PAGO" as const,
+        // 🔥 AJUSTE AQUI: Forçamos a tipagem exata para o TypeScript parar de chorar
+        status: (a.payment_method ? "PAGO" : "PENDENTE") as "PAGO" | "PENDENTE",
         clientName: a.client.name,
         paymentMethod: a.payment_method || undefined,
       });
 
-      // 🔥 Linha 2: A Despesa de Material (Se o serviço tiver custo)
+      // Linha 2: A Despesa de Material
       if (a.service.material_cost && Number(a.service.material_cost) > 0) {
         items.push({
           id: `custo_${a.id}`,
@@ -161,13 +222,13 @@ export async function getFinanceDashboardData() {
           amount: Number(a.service.material_cost),
           date: a.date_time.toISOString(),
           status: "PAGO" as const,
-          clientName: a.client.name, // Mostra o nome do cliente pra saber de qual atendimento foi
+          clientName: a.client.name,
         });
       }
       return items;
     });
 
-    const historyFromTx = monthTransactions.map((t) => ({
+    const historyFromTx = filteredTransactions.map((t) => ({
       id: t.id,
       type: t.type,
       description: t.description,
@@ -178,23 +239,23 @@ export async function getFinanceDashboardData() {
       paymentMethod: t.payment_method?.type || undefined,
     }));
 
+    // 🔥 FILTRO MÁGICO: Exibe apenas os registros de Ontem e Hoje no máximo!
     const allHistory = [...historyFromAppts, ...historyFromTx]
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-      .slice(0, 15); // Aumentei para 15 itens já que agora gera 2 linhas por check-in
+      .filter((h) => new Date(h.date) >= yesterdayStart)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return {
       summary: {
         receivedMonth: incomeFromAppts + incomeFromTx,
-        pendingMonth: pendingFromTx,
-        expensesMonth: expensesFromTx + expensesFromAppts, // 🔥 Soma total real
+        pendingMonth: pendingFromAppts + pendingFromTx, // Soma agenda pendente + manual pendente
+        expensesMonth: expensesFromAppts + expensesFromTx, // Soma insumos + manuais
         balanceMonth:
-          incomeFromAppts + incomeFromTx - (expensesFromTx + expensesFromAppts),
+          incomeFromAppts + incomeFromTx - (expensesFromAppts + expensesFromTx),
       },
       secondary: {
         receivedToday,
         receivedWeek,
-        pendingCount: monthTransactions.filter((t) => t.status === "PENDENTE")
-          .length,
+        pendingCount: pendingFromAppts + pendingFromTx,
         topPaymentMethod,
       },
       recentTransactions: allHistory,

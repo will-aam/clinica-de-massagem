@@ -7,7 +7,7 @@ import { FinanceHeader } from "@/components/finance/finance-header";
 import { FinanceSecondaryIndicators } from "@/components/finance/finance-secondary-indicators";
 import { FinanceSummaryCards } from "@/components/finance/finance-summary-cards";
 import { RecentTransactionsList } from "@/components/finance/recent-transactions-list";
-import { ArrowUp, Loader2 } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getFinanceDashboardData } from "@/app/actions/finance-dashboard";
 import {
@@ -21,7 +21,10 @@ export default function FinanceDashboardPage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Estados para os dados reais
+  // Filtros de Data
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+
   const [summaryData, setSummaryData] = useState<FinanceSummary | null>(null);
   const [secondaryData, setSecondaryData] =
     useState<SecondaryIndicators | null>(null);
@@ -32,7 +35,7 @@ export default function FinanceDashboardPage() {
   const loadDashboard = useCallback(async () => {
     setIsLoading(true);
     try {
-      const data = await getFinanceDashboardData();
+      const data = await getFinanceDashboardData(selectedMonth, selectedYear);
       if (data) {
         setSummaryData(data.summary);
         setSecondaryData(data.secondary);
@@ -43,8 +46,9 @@ export default function FinanceDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedMonth, selectedYear]);
 
+  // Recarrega sempre que o mês ou o ano mudarem
   useEffect(() => {
     loadDashboard();
 
@@ -60,10 +64,15 @@ export default function FinanceDashboardPage() {
       <AdminHeader title="Financeiro" />
 
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-6xl mx-auto w-full pb-24 md:pb-6 relative">
-        <FinanceHeader />
+        <FinanceHeader
+          onSuccess={loadDashboard}
+          selectedMonth={selectedMonth}
+          selectedYear={selectedYear}
+          onMonthChange={setSelectedMonth}
+          onYearChange={setSelectedYear}
+        />
 
         {isLoading ? (
-          // SKELETONS: Mantém o layout enquanto carrega
           <div className="space-y-8">
             <div className="flex gap-4 overflow-hidden">
               <Skeleton className="h-32 min-w-[85vw] md:min-w-0 md:flex-1 rounded-2xl" />
@@ -79,20 +88,17 @@ export default function FinanceDashboardPage() {
           </div>
         ) : (
           <>
-            {/* Cards Principais */}
             {summaryData && <FinanceSummaryCards data={summaryData} />}
 
-            {/* Indicadores Secundários */}
             <div className="mt-2 md:mt-0">
               <h3 className="text-sm font-medium text-muted-foreground mb-3 px-1">
-                Visão Rápida
+                Visão Rápida (Semana Atual)
               </h3>
               {secondaryData && (
                 <FinanceSecondaryIndicators data={secondaryData} />
               )}
             </div>
 
-            {/* Lista de Histórico */}
             <div className="mt-2 md:mt-0">
               <RecentTransactionsList data={recentTransactions} />
             </div>
@@ -108,7 +114,6 @@ export default function FinanceDashboardPage() {
             ? "translate-y-0 opacity-100"
             : "translate-y-10 opacity-0 pointer-events-none",
         )}
-        aria-label="Voltar ao topo"
       >
         <ArrowUp className="h-5 w-5" strokeWidth={2.5} />
       </button>

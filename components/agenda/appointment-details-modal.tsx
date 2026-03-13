@@ -41,7 +41,7 @@ import {
   Save,
   Loader2,
   Printer,
-  Repeat, // 🔥 Importado para indicar recorrência
+  Repeat,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -50,6 +50,9 @@ import {
   deleteAppointment,
 } from "@/app/actions/appointments";
 import { ThermalReceipt } from "./thermal-receipt";
+// 🔥 Importamos a action para buscar os meios de pagamento e a tipagem
+import { getPaymentMethods } from "@/app/actions/payment-methods";
+import { OrganizationPaymentMethod } from "@/types/finance";
 
 interface AppointmentDetailsModalProps {
   open: boolean;
@@ -71,6 +74,11 @@ export function AppointmentDetailsModal({
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<any>(null);
 
+  // 🔥 Estado para guardar os meios de pagamento cadastrados
+  const [paymentMethods, setPaymentMethods] = useState<
+    OrganizationPaymentMethod[]
+  >([]);
+
   const componentRef = useRef<HTMLDivElement>(null);
 
   const handlePrint = useReactToPrint({
@@ -79,18 +87,22 @@ export function AppointmentDetailsModal({
   });
 
   useEffect(() => {
-    async function loadSettings() {
+    async function loadSettingsAndMethods() {
       try {
         const res = await fetch("/api/settings/public");
         if (res.ok) {
           const data = await res.json();
           setSettings(data);
         }
+
+        // 🔥 Busca os meios de pagamento reais do banco
+        const methodsData = await getPaymentMethods();
+        setPaymentMethods(methodsData as OrganizationPaymentMethod[]);
       } catch (e) {
         console.error(e);
       }
     }
-    if (open) loadSettings();
+    if (open) loadSettingsAndMethods();
   }, [open]);
 
   useEffect(() => {
@@ -100,10 +112,9 @@ export function AppointmentDetailsModal({
         dbStatus === "pendente" ? "a_confirmar" : dbStatus || "a_confirmar",
       );
 
+      // 🔥 Ajustado para usar o valor exato que vem do banco (sem jogar pra minúsculo)
       const currentPayment =
-        appointment.paymentMethod?.toLowerCase() ||
-        appointment.payment_method?.toLowerCase() ||
-        "nenhum";
+        appointment.paymentMethod || appointment.payment_method || "nenhum";
       setPayment(currentPayment);
 
       setObs(appointment.observations || "");
@@ -113,7 +124,6 @@ export function AppointmentDetailsModal({
 
   if (!appointment) return null;
 
-  // 🔥 Verifica se o agendamento é parte de uma recorrência
   const isRecurrent = !!appointment.recurrence_id;
 
   const handleSave = async (
@@ -127,12 +137,12 @@ export function AppointmentDetailsModal({
         appointment.id,
         {
           status: targetStatus,
-          paymentMethod: payment,
+          paymentMethod: payment === "nenhum" ? null : payment, // 🔥 Manda null se for nenhum
           observations: obs,
           hasCharge: targetStatus === "cancelado" ? false : hasCharge,
         },
-        updateAllSeries, // 🔥 Passa se deve atualizar todos
-        appointment.recurrence_id, // 🔥 Passa o ID do grupo
+        updateAllSeries,
+        appointment.recurrence_id,
       );
 
       if (result.success) {
@@ -155,11 +165,10 @@ export function AppointmentDetailsModal({
 
   const handleDelete = async (deleteAll = false) => {
     try {
-      // 🔥 Atualizado para passar os novos parâmetros
       await deleteAppointment(
         appointment.id,
         deleteAll,
-        appointment.recurrence_id, // Certifique-se que o objeto appointment possui esse campo
+        appointment.recurrence_id,
       );
 
       toast.success(deleteAll ? "Série excluída!" : "Agendamento excluído!");
@@ -169,6 +178,7 @@ export function AppointmentDetailsModal({
       toast.error("Erro ao excluir agendamento.");
     }
   };
+
   const calculateEndTime = (start: string, duration: number) => {
     const [h, m] = start.split(":").map(Number);
     const date = new Date();
@@ -324,18 +334,18 @@ export function AppointmentDetailsModal({
                   <SelectItem value="nenhum" className="rounded-lg">
                     Aguardando...
                   </SelectItem>
-                  <SelectItem value="pix" className="rounded-lg">
-                    Pix
-                  </SelectItem>
-                  <SelectItem value="dinheiro" className="rounded-lg">
-                    Dinheiro
-                  </SelectItem>
-                  <SelectItem value="cartao_credito" className="rounded-lg">
-                    Crédito
-                  </SelectItem>
-                  <SelectItem value="cartao_debito" className="rounded-lg">
-                    Débito
-                  </SelectItem>
+                  {/* 🔥 Renderização dinâmica dos métodos de pagamento */}
+                  {paymentMethods
+                    .filter((pm) => pm.isActive)
+                    .map((pm) => (
+                      <SelectItem
+                        key={pm.id}
+                        value={pm.type}
+                        className="rounded-lg"
+                      >
+                        {pm.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
