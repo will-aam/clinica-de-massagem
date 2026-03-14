@@ -159,7 +159,7 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-5xl mx-auto w-full pb-24 md:pb-6 relative">
         <div className="mb-2">
           <h2 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-primary" /> Visão Estratégica
+            <BarChart3 className="h-6 w-6 text-primary" /> Relátorios
           </h2>
           <p className="text-muted-foreground text-sm mt-1">
             Acompanhe o crescimento, faturamento e os melhores serviços da sua
@@ -416,8 +416,8 @@ export default function ReportsPage() {
 
               {/* ABA 3: EXPORTAR */}
               <TabsContent value="exportar" className="outline-none">
-                <Card className="rounded-2xl border-border/50 shadow-sm">
-                  <CardHeader>
+                <Card className="rounded-2xl border-0 shadow-none bg-transparent md:border md:border-border/50 md:shadow-sm md:bg-card mt-2 md:mt-0">
+                  <CardHeader className="px-0 pt-0 md:pt-6 md:px-6">
                     <CardTitle className="flex items-center gap-2 text-lg">
                       <Download className="h-5 w-5 text-primary" />
                       Exportar Fechamento
@@ -427,7 +427,7 @@ export default function ReportsPage() {
                       ao e-mail informado.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-6 px-0 md:px-6">
                     <div className="space-y-2">
                       <Label>Selecione o Período</Label>
                       <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export default function ReportsPage() {
                           value={selectedMonth.toString()}
                           onValueChange={(val) => setSelectedMonth(Number(val))}
                         >
-                          <SelectTrigger className="h-12 w-full sm:w-37.5 rounded-xl bg-muted/30 border-none">
+                          <SelectTrigger className="h-12 w-full sm:w-37.5unded-xl bg-muted/30 border-none">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="rounded-xl">
