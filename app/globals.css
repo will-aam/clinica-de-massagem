@@ -126,63 +126,14 @@
     @apply bg-background text-foreground;
   }
 }
-
 /* =========================================
-   SCROLLBAR NEUTRA (Adapta ao Claro/Escuro)
+   OCULTAR SCROLLBAR GLOBALMENTE
    ========================================= */
 * {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-width: none; /* Oculta no Firefox */
+  -ms-overflow-style: none; /* Oculta no IE e Edge */
 }
 
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-  border-radius: 10px;
-}
-
-*:hover::-webkit-scrollbar-track {
-  background: var(--muted);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 10px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-  border: 1px solid transparent;
-  background-clip: padding-box;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: var(--background);
-  border-radius: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 8px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--muted-foreground);
-}
-
-/* Ocultar barra de rolagem mantendo a funcionalidade de scroll */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none; /* IE e Edge */
-  scrollbar-width: none; /* Firefox */
+*::-webkit-scrollbar {
+  display: none; /* Oculta no Chrome, Safari e Opera */
 }
