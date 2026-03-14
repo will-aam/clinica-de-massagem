@@ -21,6 +21,7 @@ import {
   UserCog,
   Award,
   Link2,
+  ShelvingUnit,
   Loader2,
 } from "lucide-react";
 import {
@@ -46,7 +47,7 @@ import {
 } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
-// 🔥 Menu principal atualizado (Agendamento adicionado após Serviços)
+// Menu principal
 const navItems = [
   {
     title: "Dashboard",
@@ -69,10 +70,11 @@ const navItems = [
     active: true,
   },
   { title: "Vouchers", href: "/admin/vouchers", icon: Award, active: true },
+  { title: "Estoque", href: "#", icon: ShelvingUnit, active: false }, // 🔒 BLOQUEADO
   { title: "Link na Bio", href: "/admin/link-bio", icon: Link2, active: false }, // 🔒 BLOQUEADO
 ];
 
-// 🔥 Sub-itens da Agenda (Lembretes ATIVADO!)
+// Sub-itens da Agenda
 const agendaSubItems = [
   { title: "Agendamentos Recorrentes", href: "/admin/recurring", active: true },
   { title: "Confirmações e Lembretes", href: "/admin/reminders", active: true },
@@ -105,6 +107,9 @@ export function AdminSidebar() {
   const [clinicName, setClinicName] = useState("Totten");
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [openModule, setOpenModule] = useState<"agenda" | "finance" | null>(
+    null,
+  );
 
   const supportPhone = "5579998752198";
   const supportMessage = encodeURIComponent(
@@ -205,14 +210,19 @@ export function AdminSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup className="mt-4">
+        <SidebarGroup className="mt-0.5">
           <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70 px-2">
             Módulos
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {/* Agenda */}
-              <Collapsible asChild className="group/collapsible w-full">
+              <Collapsible
+                asChild
+                className="group/collapsible w-full"
+                open={openModule === "agenda"}
+                onOpenChange={(open) => setOpenModule(open ? "agenda" : null)}
+              >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
@@ -263,7 +273,12 @@ export function AdminSidebar() {
               </Collapsible>
 
               {/* Financeiro */}
-              <Collapsible asChild className="group/collapsible w-full">
+              <Collapsible
+                asChild
+                className="group/collapsible w-full"
+                open={openModule === "finance"}
+                onOpenChange={(open) => setOpenModule(open ? "finance" : null)}
+              >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
                     <SidebarMenuButton className="hover:bg-muted/50">
