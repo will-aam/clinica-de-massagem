@@ -84,12 +84,7 @@ export function FinanceSummaryCards({ data }: FinanceSummaryCardsProps) {
       </Card>
 
       {/* Card: Saldo */}
-      <Card
-        className={cn(
-          cardClasses,
-          "bg-slate-50 dark:bg-slate-900/50 border-blue-100 dark:border-blue-900",
-        )}
-      >
+      <Card className={cardClasses}>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">
             Saldo do Mês
@@ -99,7 +94,7 @@ export function FinanceSummaryCards({ data }: FinanceSummaryCardsProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-3xl font-bold text-blue-600 dark:text-blue-500 tracking-tight">
+          <div className="text-3xl font-bold text-foreground tracking-tight">
             {formatCurrency(data.balanceMonth)}
           </div>
           <p className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

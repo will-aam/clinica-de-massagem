@@ -88,8 +88,7 @@ const financeSubItems = [
     active: true,
   },
   { title: "Dashboard", href: "/admin/finance/dashboard", active: true },
-  { title: "Receitas", href: "#", active: false },
-  { title: "Despesas", href: "#", active: false },
+  { title: "Extrato", href: "/admin/finance/transactions", active: true },
   {
     title: "Meios de Pagamento",
     href: "/admin/finance/payment-methods",

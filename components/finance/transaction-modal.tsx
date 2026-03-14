@@ -21,7 +21,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// Importamos os tipos oficiais do Prisma que reexportamos em finance.ts
 import {
   TransactionType,
   TransactionStatus,
@@ -29,39 +28,50 @@ import {
 } from "@/types/finance";
 import { ArrowDownCircle, ArrowUpCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createTransaction } from "@/app/actions/transactions";
+// 🔥 Importamos a função de update também
+import {
+  createTransaction,
+  updateTransaction,
+} from "@/app/actions/transactions";
 import { getPaymentMethods } from "@/app/actions/payment-methods";
 import { useToast } from "@/hooks/use-toast";
 
 interface TransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
-  // A UI continua enviando INCOME/EXPENSE, nós traduzimos aqui dentro
   type: "INCOME" | "EXPENSE";
+  // 🔥 Adicionamos os dados iniciais opcionais para o modo de Edição
+  initialData?: {
+    id: string;
+    description: string;
+    amount: number;
+    date: string;
+    status: TransactionStatus;
+    paymentMethodId?: string;
+  } | null;
 }
 
 export function TransactionModal({
   isOpen,
   onClose,
   type,
+  initialData,
 }: TransactionModalProps) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
 
-  // Estados do formulário usando os tipos do Prisma
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number | "">("");
-  const [date, setDate] = useState<string>(
-    new Date().toISOString().split("T")[0],
-  );
-  const [status, setStatus] = useState<TransactionStatus>("PAGO"); // Ajustado para PAGO
-  const [paymentMethodId, setPaymentMethodId] = useState<string>("");
+  const [date, setDate] = useState<string>("");
+  const [status, setStatus] = useState<TransactionStatus>("PAGO");
+  const [paymentMethodId, setPaymentMethodId] = useState<string>("none");
 
   const [paymentMethods, setPaymentMethods] = useState<
     OrganizationPaymentMethod[]
   >([]);
 
   const isIncome = type === "INCOME";
+  const isEditing = !!initialData;
 
   useEffect(() => {
     if (isOpen) {
@@ -71,30 +81,52 @@ export function TransactionModal({
       };
       loadMethods();
 
-      setDescription("");
-      setAmount("");
-      setDate(new Date().toISOString().split("T")[0]);
-      setStatus("PAGO"); // Reset para o valor correto do Enum
-      setPaymentMethodId("");
+      // 🔥 Se for edição, preenche com os dados que vieram, senão zera tudo.
+      if (initialData) {
+        setDescription(initialData.description);
+        setAmount(initialData.amount);
+        // Garante que a data vem no formato YYYY-MM-DD para o input type="date"
+        setDate(initialData.date.split("T")[0]);
+        setStatus(initialData.status);
+        setPaymentMethodId(initialData.paymentMethodId || "none");
+      } else {
+        setDescription("");
+        setAmount("");
+        setDate(new Date().toISOString().split("T")[0]);
+        setStatus("PAGO");
+        setPaymentMethodId("none");
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialData]);
 
   const handleSave = () => {
     if (!description || !amount || !date) return;
 
     startTransition(async () => {
-      const result = await createTransaction({
-        // Tradução direta para o Prisma
-        type: isIncome ? "RECEITA" : "DESPESA",
+      const payload = {
+        type: isIncome
+          ? ("RECEITA" as TransactionType)
+          : ("DESPESA" as TransactionType),
         description,
         amount: Number(amount),
         date,
-        status, // O status já está no formato certo (PAGO ou PENDENTE)
-        paymentMethodId: paymentMethodId || undefined,
-      });
+        status,
+        paymentMethodId:
+          paymentMethodId === "none" ? undefined : paymentMethodId,
+      };
+
+      // 🔥 Se tiver ID, atualiza. Se não, cria.
+      const result = isEditing
+        ? await updateTransaction(initialData.id, payload)
+        : await createTransaction(payload);
 
       if (result.success) {
-        toast({ title: "Sucesso", description: "Movimentação registrada!" });
+        toast({
+          title: "Sucesso",
+          description: isEditing
+            ? "Movimentação atualizada!"
+            : "Movimentação registrada!",
+        });
         onClose();
       } else {
         toast({
@@ -115,7 +147,7 @@ export function TransactionModal({
       open={isOpen}
       onOpenChange={(open) => !open && !isPending && onClose()}
     >
-      <SheetContent className="flex flex-col w-full sm:max-w-md p-0 overflow-hidden">
+      <SheetContent className="flex flex-col w-full sm:max-w-md p-0 overflow-hidden border-l-0 sm:border-l">
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <SheetHeader className="text-left space-y-4">
             <div className="flex items-center gap-3">
@@ -135,12 +167,20 @@ export function TransactionModal({
               </div>
               <div>
                 <SheetTitle className="text-2xl">
-                  {isIncome ? "Nova Receita" : "Nova Despesa"}
+                  {isEditing
+                    ? isIncome
+                      ? "Editar Receita"
+                      : "Editar Despesa"
+                    : isIncome
+                      ? "Nova Receita"
+                      : "Nova Despesa"}
                 </SheetTitle>
                 <SheetDescription>
-                  {isIncome
-                    ? "Registe uma nova entrada financeira."
-                    : "Registe uma nova saída ou custo."}
+                  {isEditing
+                    ? "Atualize os dados desta movimentação."
+                    : isIncome
+                      ? "Registe uma nova entrada financeira."
+                      : "Registe uma nova saída ou custo."}
                 </SheetDescription>
               </div>
             </div>
@@ -170,7 +210,7 @@ export function TransactionModal({
                   }
                   disabled={isPending}
                   className={cn(
-                    "h-14 rounded-xl pl-10 text-xl font-bold",
+                    "h-14 rounded-xl pl-10 text-xl font-bold bg-muted/30 border-none",
                     hideNumberArrows,
                   )}
                   placeholder="0.00"
@@ -185,7 +225,7 @@ export function TransactionModal({
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={isPending}
                 placeholder={isIncome ? "Ex: Venda de Produto" : "Ex: Aluguel"}
-                className="h-12 rounded-xl"
+                className="h-12 rounded-xl bg-muted/30 border-none"
               />
             </div>
 
@@ -197,7 +237,7 @@ export function TransactionModal({
                   value={date}
                   onChange={(e) => setDate(e.target.value)}
                   disabled={isPending}
-                  className="h-12 rounded-xl"
+                  className="h-12 rounded-xl bg-muted/30 border-none"
                 />
               </div>
 
@@ -208,7 +248,7 @@ export function TransactionModal({
                   onValueChange={(val) => setStatus(val as TransactionStatus)}
                   disabled={isPending}
                 >
-                  <SelectTrigger className="h-12 rounded-xl">
+                  <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
@@ -226,10 +266,13 @@ export function TransactionModal({
                 onValueChange={setPaymentMethodId}
                 disabled={isPending}
               >
-                <SelectTrigger className="h-12 rounded-xl">
+                <SelectTrigger className="h-12 rounded-xl bg-muted/30 border-none">
                   <SelectValue placeholder="Selecione..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
+                  <SelectItem value="none">
+                    Nenhum / Dinheiro em mãos
+                  </SelectItem>
                   {paymentMethods
                     .filter((pm) => pm.isActive)
                     .map((pm) => (
@@ -247,7 +290,7 @@ export function TransactionModal({
           <SheetFooter className="flex-row gap-2">
             <Button
               variant="outline"
-              className="flex-1 h-12 rounded-xl"
+              className="flex-1 h-12 rounded-xl border-none bg-muted hover:bg-muted/80"
               onClick={onClose}
               disabled={isPending}
             >
@@ -255,7 +298,7 @@ export function TransactionModal({
             </Button>
             <Button
               className={cn(
-                "flex-1 h-12 rounded-xl text-white",
+                "flex-1 h-12 rounded-xl text-white font-bold",
                 isIncome
                   ? "bg-emerald-600 hover:bg-emerald-700"
                   : "bg-rose-600 hover:bg-rose-700",
@@ -264,7 +307,9 @@ export function TransactionModal({
               disabled={isSaveDisabled}
             >
               {isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : isEditing ? (
+                "Salvar Alterações"
               ) : (
                 "Salvar"
               )}
